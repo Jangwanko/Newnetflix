@@ -1,0 +1,18 @@
+<!-- movies/templates/movies/movie_detail.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ movie.title }}</title>
+</head>
+<body>
+    <h1>{{ movie.title }}</h1>
+    <p>{{ movie.description }}</p>
+    <video width="640" height="360" controls>
+        <source src="{{ movie.video_file.url }}" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <a href="{% url 'movie_list' %}">Back to List</a>
+</body>
+</html>

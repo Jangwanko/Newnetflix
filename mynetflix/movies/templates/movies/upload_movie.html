@@ -1,0 +1,22 @@
+<!-- movies/templates/movies/upload_movie.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upload Movie</title>
+  </head>
+  <body>
+    <h1>Upload Movie</h1>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %} {{ form.as_p }}
+      <p>
+        <strong>Note:</strong> Only MP4 files are allowed, and the file size
+        must be less than 1GB.
+      </p>
+      <!-- 부연 설명 추가 -->
+      <button type="submit">Upload</button>
+    </form>
+    <a href="{% url 'movie_list' %}">Back to List</a>
+  </body>
+</html>
