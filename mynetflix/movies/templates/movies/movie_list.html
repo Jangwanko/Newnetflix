@@ -1,14 +1,14 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>비디오 목록</title>
-</head>
-<body>
-    <h1>업로드된 비디오</h1>
-    <ul>
-        {% for movie in movies %}
-            <li><a href="{% url 'movie_detail' movie.id %}">{{ movie.title }}</a></li>
-        {% endfor %}
-    </ul>
-</body>
-</html>
+{% extends 'movies/base.html' %}
+
+{% block title %}비디오 목록{% endblock %}
+
+{% block content %}
+<h2>업로드된 비디오</h2>
+<ul>
+  {% for movie in movies %}
+  <li><a href="{% url 'movie_detail' movie.id %}">{{ movie.title }}</a></li>
+  {% empty %}
+  <li>업로드된 비디오가 없습니다.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

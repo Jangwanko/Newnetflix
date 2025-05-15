@@ -1,10 +1,13 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.core.files.storage import FileSystemStorage
 from django.http import JsonResponse
+from django.contrib import messages
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
 import os
 from django.conf import settings
 from .models import Movie
+from .forms import MovieForm
 
 def home(request):
     return render(request, 'movies/home.html')
@@ -14,7 +17,7 @@ def movie_list(request):
     return render(request, 'movies/movie_list.html', {'movies': movies})
 
 def movie_detail(request, movie_id):
-    movie = Movie.objects.get(id=movie_id)
+    movie = get_object_or_404(Movie, id=movie_id)
     return render(request, 'movies/movie_detail.html', {'movie': movie})
 
 def upload_movie(request):
@@ -38,31 +41,37 @@ def upload_movie(request):
     return render(request, 'movies/upload.html')
 
 def delete_movie(request, movie_id):
-    movie = Movie.objects.get(id=movie_id)
+    movie = get_object_or_404(Movie, id=movie_id)
     file_path = movie.video_file.path
-
     try:
         if os.path.exists(file_path):
-            os.remove(file_path)  # 실제 파일 삭제
+            os.remove(file_path)
     except PermissionError:
-        messages.error(request, "파일이 사용 중입니다. 브라우저나 프로그램에서 영상을 닫고 다시 시도하세요.")
-        return redirect('movie_detail', movie_id=movie.id)
-
-    movie.delete()  # DB 레코드 삭제
-    messages.success(request, "영상이 삭제되었습니다.")
+        pass
+    movie.delete()
     return redirect('movie_list')
 
 def edit_movie(request, movie_id):
-    movie = Movie.objects.get(id=movie_id)
-
+    movie = get_object_or_404(Movie, id=movie_id)
     if request.method == 'POST':
-        title = request.POST.get('title')
-        description = request.POST.get('description')
+        form = MovieForm(request.POST, instance=movie)
+        if form.is_valid():
+            form.save()
+            return redirect('movie_detail', movie_id=movie.id)
+    else:
+        form = MovieForm(instance=movie)
+    return render(request, 'movies/edit_movie.html', {'form': form})
 
-        movie.title = title
-        movie.description = description
-        movie.save()
+def home(request):
+    return render(request, 'movies/home.html')
 
-        return redirect('movie_detail', movie_id=movie.id)
-
-    return render(request, 'movies/edit_movie.html', {'movie': movie})
+def signup(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, '회원가입이 완료되었습니다. 로그인해주세요.')
+            return redirect('login')  # 로그인 페이지 URL 이름
+    else:
+        form = UserCreationForm()
+    return render(request, 'movies/signup.html', {'form': form})

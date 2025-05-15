@@ -1,10 +1,15 @@
 from django.urls import path
 from . import views
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    path('', views.movie_list, name='movie_list'),
+    path('', views.home, name='home'),  # 홈 뷰 추가, '' 빈 경로
+    path('movies/', views.movie_list, name='movie_list'),
     path('movie/<int:movie_id>/', views.movie_detail, name='movie_detail'),
+    path('upload/', views.upload_movie, name='upload_movie'),
     path('movie/<int:movie_id>/edit/', views.edit_movie, name='edit_movie'),
     path('movie/<int:movie_id>/delete/', views.delete_movie, name='delete_movie'),
-    path('upload/', views.upload_movie, name='upload_movie'),
+    path('signup/', views.signup, name='signup'),
+    path('login/', auth_views.LoginView.as_view(template_name='movies/login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
 ]

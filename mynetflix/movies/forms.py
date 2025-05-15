@@ -8,7 +8,7 @@ from django.conf import settings
 class MovieForm(forms.ModelForm):
     class Meta:
         model = Movie
-        fields = ['title', 'description', 'genre', 'year', 'video_file']
+        fields = ['title', 'description', 'video_file']
 
     def clean_video_file(self):
         video_file = self.cleaned_data.get('video_file')

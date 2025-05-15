@@ -1,15 +1,23 @@
+{% extends 'movies/base.html' %}
+
+{% block title %}{{ movie.title }}{% endblock %}
+
+{% block content %}
 <h2>{{ movie.title }}</h2>
 
 <video width="640" height="360" controls>
-    <source src="{{ movie.video_file.url }}" type="video/mp4">
-    Your browser does not support the video tag.
+  <source src="{{ movie.video_file.url }}" type="video/mp4">
+  브라우저가 video 태그를 지원하지 않습니다.
 </video>
 
-<p>{{ movie.description }}</p>
+<p>설명: {{ movie.description }}</p>
 
-<!-- 기능 버튼 영역 -->
-<div style="margin-top: 20px;">
-    <a href="{% url 'edit_movie' movie.id %}">영상 수정</a> |
-    <a href="{% url 'delete_movie' movie.id %}" onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a> |
-    <a href="{% url 'movie_list' %}">목록으로 돌아가기</a>
-</div>
+<!-- 제목 수정 버튼 -->
+<a href="{% url 'edit_movie' movie.id %}" class="btn">제목 수정</a>
+
+<!-- 삭제 버튼 -->
+<a href="{% url 'delete_movie' movie.id %}" class="btn delete">삭제</a>
+
+<!-- 상위 페이지 이동 버튼 -->
+<a href="{% url 'movie_list' %}" class="btn">목록으로 돌아가기</a>
+{% endblock %}
