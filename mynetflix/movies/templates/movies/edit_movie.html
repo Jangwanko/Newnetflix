@@ -1,13 +1,9 @@
-{% extends 'movies/base.html' %}
-
-{% block title %}영상 제목 수정{% endblock %}
-
+{% extends 'movies/base.html' %} {% block title %}영상 제목 수정{% endblock %}
 {% block content %}
 <h1>영상 제목 수정</h1>
 <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn">저장</button>
+  {% csrf_token %} {{ form.as_p }}
+  <button type="submit" class="btn">저장</button>
 </form>
 <a href="{% url 'movie_detail' form.instance.id %}" class="btn">취소</a>
 {% endblock %}

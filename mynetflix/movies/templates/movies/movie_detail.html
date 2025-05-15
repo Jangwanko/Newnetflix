@@ -1,12 +1,9 @@
-{% extends 'movies/base.html' %}
-
-{% block title %}{{ movie.title }}{% endblock %}
-
-{% block content %}
+{% extends 'movies/base.html' %} {% block title %}{{ movie.title }}{% endblock
+%} {% block content %}
 <h2>{{ movie.title }}</h2>
 
 <video width="640" height="360" controls>
-  <source src="{{ movie.video_file.url }}" type="video/mp4">
+  <source src="{{ movie.video_file.url }}" type="video/mp4" />
   브라우저가 video 태그를 지원하지 않습니다.
 </video>
 

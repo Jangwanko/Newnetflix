@@ -1,21 +1,21 @@
-{% extends 'movies/base.html' %}
-
-{% block content %}
+{% extends 'movies/base.html' %} {% block content %}
 <h2>회원가입</h2>
 
-<div class="signup-info" style="margin-bottom: 20px;">
+<div class="signup-info" style="margin-bottom: 20px">
   <p>새 계정을 만들려면 아래 정보를 정확히 입력해주세요.</p>
   <ul>
     <li>아이디는 4자 이상 20자 이하로 작성해주세요.</li>
-    <li>비밀번호는 최소 8자 이상이며, 영문자, 숫자, 특수문자를 포함하는 것이 좋습니다.</li>
+    <li>
+      비밀번호는 최소 8자 이상이며, 영문자, 숫자, 특수문자를 포함하는 것이
+      좋습니다.
+    </li>
     <li>비밀번호 확인란에 동일한 비밀번호를 입력해 주세요.</li>
     <li>이메일 주소는 계정 복구 및 공지 발송 용도로 사용됩니다.</li>
   </ul>
 </div>
 
 <form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
+  {% csrf_token %} {{ form.as_p }}
   <button type="submit">회원가입</button>
 </form>
 

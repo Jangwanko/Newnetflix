@@ -1,52 +1,51 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <title>{% block title %}My Netflix{% endblock %}</title>
-  <style>
-    .btn {
-      padding: 8px 16px;
-      background-color: #007BFF;
-      color: white;
-      border: none;
-      text-decoration: none;
-      border-radius: 4px;
-      margin: 4px;
-      cursor: pointer;
-    }
-    .btn.delete {
-      background-color: #dc3545;
-    }
-    nav a, nav span {
-      vertical-align: middle;
-    }
-    nav span {
-      color: #333;
-      margin-right: 10px;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>My Netflix Clone</h1>
-    <nav>
-      <a href="{% url 'home' %}" class="btn">홈</a>
-      <a href="{% url 'movie_list' %}" class="btn">영화 목록</a>
-      <a href="{% url 'upload_movie' %}" class="btn">영상 업로드</a>
+  <head>
+    <meta charset="UTF-8" />
+    <title>{% block title %}My Netflix{% endblock %}</title>
+    <style>
+      .btn {
+        padding: 8px 16px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        text-decoration: none;
+        border-radius: 4px;
+        margin: 4px;
+        cursor: pointer;
+      }
+      .btn.delete {
+        background-color: #dc3545;
+      }
+      nav a,
+      nav span {
+        vertical-align: middle;
+      }
+      nav span {
+        color: #333;
+        margin-right: 10px;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>My Netflix Clone</h1>
+      <nav>
+        <a href="{% url 'home' %}" class="btn">홈</a>
+        <a href="{% url 'movie_list' %}" class="btn">영화 목록</a>
+        <a href="{% url 'upload_movie' %}" class="btn">영상 업로드</a>
 
-      {% if user.is_authenticated %}
+        {% if user.is_authenticated %}
         <span>{{ user.username }}님 환영합니다</span>
         <a href="{% url 'logout' %}" class="btn">로그아웃</a>
-      {% else %}
+        {% else %}
         <a href="{% url 'login' %}" class="btn">로그인</a>
         <a href="{% url 'signup' %}" class="btn">회원가입</a>
-      {% endif %}
-    </nav>
-  </header>
+        {% endif %}
+      </nav>
+    </header>
 
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-</body>
+    <main>{% block content %}{% endblock %}</main>
+  </body>
 </html>

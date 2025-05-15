@@ -1,6 +1,4 @@
-{% extends 'movies/base.html' %}
-
-{% block content %}
+{% extends 'movies/base.html' %} {% block content %}
 <h1>비디오 업로드</h1>
 <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
