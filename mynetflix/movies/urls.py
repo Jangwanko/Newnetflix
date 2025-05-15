@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
+from .views import CustomLoginView, CustomLogoutView
 
 urlpatterns = [
     path('', views.home, name='home'),  # 홈 뷰 추가, '' 빈 경로
@@ -10,6 +11,8 @@ urlpatterns = [
     path('movie/<int:movie_id>/edit/', views.edit_movie, name='edit_movie'),
     path('movie/<int:movie_id>/delete/', views.delete_movie, name='delete_movie'),
     path('signup/', views.signup, name='signup'),
-    path('login/', auth_views.LoginView.as_view(template_name='movies/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    # path('login/', auth_views.LoginView.as_view(template_name='movies/login.html'), name='login'),
+    # path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('login/', CustomLoginView.as_view(), name='login'),
+    path('logout/', CustomLogoutView.as_view(), name='logout'),
 ]

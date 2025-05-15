@@ -1,9 +1,9 @@
-{% extends 'movies/base.html' %} {% block title %}영상 업로드{% endblock %} {%
-block content %}
+{% extends 'movies/base.html' %} {% block title %}영상 업로드{% endblock %} 
+{%block content %}
 <h1>비디오 업로드</h1>
 <form method="post" enctype="multipart/form-data">
   {% csrf_token %} {{ form.as_p }}
-  <button type="submit">업로드</button>
+  <button type="submit" class="btn">업로드</button>
 </form>
-<a href="{% url 'movie_list' %}">목록으로 돌아가기</a>
+<a href="{% url 'movie_list' %}" class="btn">목록으로 돌아가기</a>
 {% endblock %}

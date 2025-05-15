@@ -4,6 +4,8 @@ from django.http import JsonResponse
 from django.contrib import messages
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib import messages
+from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.decorators import login_required
 import os
 from django.conf import settings
 from .models import Movie
@@ -12,33 +14,27 @@ from .forms import MovieForm
 def home(request):
     return render(request, 'movies/home.html')
 
+@login_required
 def movie_list(request):
-    movies = Movie.objects.all()
+    movies = Movie.objects.filter(uploaded_by=request.user).order_by('-uploaded_at')
     return render(request, 'movies/movie_list.html', {'movies': movies})
 
 def movie_detail(request, movie_id):
     movie = get_object_or_404(Movie, id=movie_id)
     return render(request, 'movies/movie_detail.html', {'movie': movie})
 
+@login_required
 def upload_movie(request):
-    if request.method == 'POST' and request.FILES.get('video_file'):
-        title = request.POST.get('title', 'Untitled')
-        description = request.POST.get('description', '')
-        video_file = request.FILES['video_file']
-
-        fs = FileSystemStorage()
-        filename = fs.save(video_file.name, video_file)
-
-        Movie.objects.create(
-            title=title,
-            description=description,
-            video_file=filename
-        )
-
-        # 업로드 후 목록 페이지로 리다이렉트
-        return redirect('movie_list')
-
-    return render(request, 'movies/upload.html')
+    if request.method == 'POST':
+        form = MovieForm(request.POST, request.FILES)
+        if form.is_valid():
+            movie = form.save(commit=False)
+            movie.uploaded_by = request.user
+            movie.save()
+            return redirect('movie_list')
+    else:
+        form = MovieForm()
+    return render(request, 'movies/upload_movie.html', {'form': form})
 
 def delete_movie(request, movie_id):
     movie = get_object_or_404(Movie, id=movie_id)
@@ -75,3 +71,19 @@ def signup(request):
     else:
         form = UserCreationForm()
     return render(request, 'movies/signup.html', {'form': form})
+
+class CustomLoginView(LoginView):
+    template_name = 'movies/login.html'
+
+    def form_valid(self, form):
+        messages.success(self.request, "로그인 되었습니다.")
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        messages.error(self.request, "아이디 혹은 비밀번호가 틀립니다.")
+        return super().form_invalid(form)
+
+class CustomLogoutView(LogoutView):
+    def dispatch(self, request, *args, **kwargs):
+        messages.info(request, "로그아웃 되었습니다.")
+        return super().dispatch(request, *args, **kwargs)
