@@ -11,8 +11,8 @@ urlpatterns = [
     path('movie/<int:movie_id>/edit/', views.edit_movie, name='edit_movie'),
     path('movie/<int:movie_id>/delete/', views.delete_movie, name='delete_movie'),
     path('signup/', views.signup, name='signup'),
-    # path('login/', auth_views.LoginView.as_view(template_name='movies/login.html'), name='login'),
-    # path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('login/', CustomLoginView.as_view(), name='login'),
     path('logout/', CustomLogoutView.as_view(), name='logout'),
+    path('stream/<int:movie_id>/', views.stream_video, name='stream_video'),
+    
 ]

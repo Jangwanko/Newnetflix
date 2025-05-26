@@ -1,9 +1,50 @@
-{% extends 'movies/base.html' %} {% block title %}영상 업로드{% endblock %} 
-{%block content %}
-<h1>비디오 업로드</h1>
-<form method="post" enctype="multipart/form-data">
-  {% csrf_token %} {{ form.as_p }}
-  <button type="submit" class="btn">업로드</button>
+<h2>영상 업로드</h2>
+
+<form id="uploadForm" method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">업로드</button>
 </form>
-<a href="{% url 'movie_list' %}" class="btn">목록으로 돌아가기</a>
-{% endblock %}
+
+<!-- 프로그레스 바 -->
+<div id="progressWrapper" style="display:none; margin-top: 20px;">
+  <progress id="progressBar" value="0" max="100" style="width: 100%;"></progress>
+  <p id="progressText">0%</p>
+</div>
+
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+
+  const form = e.target;
+  const formData = new FormData(form);
+  const xhr = new XMLHttpRequest();
+
+  // 이벤트: 업로드 시작
+  xhr.upload.addEventListener('loadstart', function() {
+    document.getElementById('progressWrapper').style.display = 'block';
+  });
+
+  // 이벤트: 업로드 진행
+  xhr.upload.addEventListener('progress', function(e) {
+    if (e.lengthComputable) {
+      const percent = Math.round((e.loaded / e.total) * 100);
+      document.getElementById('progressBar').value = percent;
+      document.getElementById('progressText').textContent = percent + '%';
+    }
+  });
+
+  // 이벤트: 완료 후 리디렉션
+  xhr.onload = function() {
+    if (xhr.status === 200 || xhr.status === 302) {
+      window.location.href = xhr.responseURL;  // 업로드 성공 시 detail 페이지로 이동
+    } else {
+      alert('업로드 실패');
+    }
+  };
+
+  xhr.open('POST', form.action);
+  xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+  xhr.send(formData);
+});
+</script>

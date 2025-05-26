@@ -50,3 +50,4 @@ class MovieForm(forms.ModelForm):
             instance.save()
 
         return instance
+
