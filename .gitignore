@@ -3,3 +3,6 @@ venv/
 db.sqlite3
 back.py
 media/
+__pycache__/
+.pyc
+.env
