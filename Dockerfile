@@ -1,5 +1,5 @@
 # Django 앱을 위한 Dockerfile
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 # 환경 설정
 ENV PYTHONDONTWRITEBYTECODE 1
@@ -13,7 +13,7 @@ COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
 # 프로젝트 코드 복사
-COPY . .
+COPY entrypoint.sh .
 
 # 엔트리포인트 설정
 RUN chmod +x entrypoint.sh

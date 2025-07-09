@@ -1,12 +1,14 @@
 #!/bin/bash
 
-echo "📦 PostgreSQL 연결 대기 중..."
-while ! nc -z db 5432; do
-  sleep 0.5
+# DB가 실행될 때까지 대기
+until nc -z db 5432; do
+  echo "Waiting for PostgreSQL..."
+  sleep 1
 done
 
-echo "🚀 마이그레이션 실행 중..."
+# 마이그레이션 및 collectstatic
 python manage.py migrate
+python manage.py collectstatic --noinput
 
-echo "🎬 서버 실행 중..."
-exec "$@"
+# gunicorn 실행
+exec gunicorn myflix.wsgi:application --bind 0.0.0.0:8000
