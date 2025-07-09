@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>{% block title %}MyFlix{% endblock %}</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      nav {
+        background-color: #f8f9fa;
+        padding: 10px 20px;
+        border-bottom: 1px solid #ddd;
+      }
+      nav a, nav span, nav form {
+        margin-right: 10px;
+        display: inline-block;
+        vertical-align: middle;
+        text-decoration: none;
+        color: #333;
+      }
+      nav form {
+        margin: 0;
+      }
+      .notification {
+        background-color: #fff3cd;
+        padding: 10px 20px;
+        border: 1px solid #ffeeba;
+        margin: 10px 20px;
+        border-radius: 5px;
+      }
+      .notification ul {
+        margin: 0;
+        padding-left: 0;
+        list-style: none;
+      }
+      .notification li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+      }
+      .notification a {
+        color: #856404;
+        text-decoration: none;
+        flex-grow: 1;
+      }
+      .notification a:hover {
+        text-decoration: underline;
+      }
+      .notification form {
+        margin-left: 10px;
+      }
+      .notification button {
+        background: none;
+        border: none;
+        color: #dc3545;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      main {
+        padding: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="{% url 'home' %}">홈</a>
+
+      {% if user.is_authenticated %}
+        <span>{{ user.username }}님</span>
+        <form action="{% url 'logout' %}" method="post" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit">로그아웃</button>
+        </form>
+      {% else %}
+        <a href="{% url 'login' %}">로그인</a>
+        <a href="{% url 'signup' %}">회원가입</a>
+      {% endif %}
+    </nav>
+
+    {% if user.is_authenticated and unread_notifications %}
+      <div class="notification">
+        <strong>🔔 알림</strong>
+        <ul>
+          {% for noti in unread_notifications %}
+            <li>
+              <a href="{% url 'read_notification' noti.id %}">
+                {{ noti.message }}
+              </a>
+              <form action="{% url 'delete_notification' noti.id %}" method="post">
+                {% csrf_token %}
+                <button type="submit" title="알림 삭제">✖</button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

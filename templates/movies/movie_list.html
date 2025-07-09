@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}영화 목록{% endblock %}
+{% block content %}
+<h2>업로드된 영상</h2>
+<ul>
+  {% for movie in movies %}
+    <li><a href="{% url 'movie_detail' movie.id %}">{{ movie.title }}</a></li>
+  {% empty %}
+    <li>아직 업로드된 영상이 없습니다.</li>
+  {% endfor %}
+</ul>
+<a href="{% url 'upload_movie' %}" class="btn">영상 업로드</a>
+{% endblock %}

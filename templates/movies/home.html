@@ -1,0 +1,11 @@
+{% extends 'base.html' %}
+{% block title %}홈{% endblock %}
+{% block content %}
+<h2>MyFlix에 오신 것을 환영합니다!</h2>
+
+{% if user.is_authenticated %}
+  <a href="{% url 'upload_movie' %}" class="btn">영상 업로드</a>
+{% endif %}
+
+<a href="{% url 'movie_list' %}" class="btn">영화 목록 보기</a>
+{% endblock %}
