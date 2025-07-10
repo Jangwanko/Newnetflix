@@ -69,10 +69,11 @@ DATABASES = {
         'NAME': os.getenv("DB_NAME"),
         'USER': os.getenv("DB_USER"),
         'PASSWORD': os.getenv("DB_PASSWORD"),
-        'HOST': os.getenv("DB_HOST"),
+        'HOST': os.getenv("DB_HOST", "db"),  # ✅ 여기 중요!
         'PORT': os.getenv("DB_PORT", "5432"),
     }
 }
+
 
 
 # Password validation
@@ -120,8 +121,8 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # static 파일을 수집하는 위치
+STATICFILES_DIRS = [BASE_DIR / 'static']  # 실제 정적 파일을 담는 개발 중 디렉터리
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
