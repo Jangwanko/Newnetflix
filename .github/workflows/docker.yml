@@ -28,4 +28,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: jangwan/newnetflix:latest
+          tags: jangwanko/newnetflix:latest
