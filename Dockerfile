@@ -1,20 +1,20 @@
 FROM python:3.13-slim
 
-# 루트에 복사
-COPY requirements.txt ./
+# 작업 디렉토리 지정
+WORKDIR /code
+
+# entrypoint 복사 및 권한 부여
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# 프로젝트 전체 복사
+COPY . /code
+
+# 종속성 설치
 RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-# Netcat 설치
-RUN apt-get update \
-    && apt-get install -y netcat-openbsd \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+# Netcat 설치 (PostgreSQL 연결 확인용)
+RUN apt-get update && apt-get install -y netcat-openbsd && apt-get clean
 
-# 실행 스크립트 복사
-COPY entrypoint.sh ./entrypoint.sh
-RUN chmod +x entrypoint.sh
-
-# 프로젝트 소스 전체 복사 (기존 manage.py 등 포함)
-COPY . . 
-
-ENTRYPOINT ["./entrypoint.sh"]
+# entrypoint 실행
+ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]
