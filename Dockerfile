@@ -3,13 +3,14 @@ FROM python:3.13-slim
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-# ✅ netcat 설치 추가
-RUN apt-get update && apt-get install -y netcat-openbsd
+RUN apt-get update \
+    && apt-get install -y netcat-openbsd \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
 COPY . .
+RUN chmod +x ./entrypoint.sh
 
 ENTRYPOINT ["./entrypoint.sh"]
