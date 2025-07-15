@@ -1,16 +1,13 @@
-FROM python:3.13-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+COPY . .
 
-RUN apt-get update \
-    && apt-get install -y netcat-openbsd \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN pip install -r requirements.txt
 
-COPY entrypoint.sh entrypoint.sh
-RUN chmod +x entrypoint.sh
+ENV DJANGO_ALLOWED_HOSTS=localhost,web
+ENV DJANGO_SECRET_KEY=your-secure-secret
+ENV DJANGO_DEBUG=False
 
-ENTRYPOINT ["./entrypoint.sh"]
+CMD ["/bin/sh", "/entrypoint.sh"]
