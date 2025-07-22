@@ -10,5 +10,5 @@ done
 python manage.py migrate
 python manage.py collectstatic --noinput
 
-# Gunicorn으로 Django 실행
+# Gunicorn으로 Django 실행중
 exec gunicorn myflix.wsgi:application --bind 0.0.0.0:8000
