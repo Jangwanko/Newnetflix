@@ -12,7 +12,6 @@ RUN pip install --upgrade pip \
 
 # 환경 변수 설정
 ENV DJANGO_ALLOWED_HOSTS=localhost,web
-ENV DJANGO_SECRET_KEY=your-secure-secret
 ENV DJANGO_DEBUG=False
 
 # Netcat 설치 (PostgreSQL 연결 확인용)
