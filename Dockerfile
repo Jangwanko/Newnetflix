@@ -4,11 +4,11 @@ FROM python:3.11-slim
 WORKDIR /code
 
 # 프로젝트 전체 복사
-COPY . /code
+COPY . .
 
 # 종속성 설치
 RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+    && pip install -r requirements.txt
 
 # 환경 변수 설정
 ENV DJANGO_ALLOWED_HOSTS=localhost,web
