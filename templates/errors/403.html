@@ -1,0 +1,12 @@
+﻿{% extends 'base.html' %}
+{% block title %}요청 오류{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>요청을 처리할 수 없습니다 (403)</h2>
+  <p>{{ csrf_error }}</p>
+  {% if reason %}
+    <p class="muted">원인: {{ reason }}</p>
+  {% endif %}
+  <p><a href="{% url 'home' %}" class="btn">홈으로 이동</a></p>
+</section>
+{% endblock %}

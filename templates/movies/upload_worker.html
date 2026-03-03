@@ -1,0 +1,132 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>업로드 진행</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 0; padding: 16px; background: #f5f6f8; color: #222; }
+      .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; max-width: 560px; margin: 0 auto; }
+      .muted { color: #6b7280; }
+      .bar-wrap { height: 12px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-top: 10px; }
+      .bar { height: 100%; width: 0; background: #2563eb; transition: width .12s ease; }
+      .error { margin-top: 10px; padding: 10px; border: 1px solid #ef4444; border-radius: 8px; background: #fef2f2; color: #991b1b; display: none; }
+      .ok { margin-top: 10px; padding: 10px; border: 1px solid #10b981; border-radius: 8px; background: #ecfdf5; color: #065f46; display: none; }
+    </style>
+  </head>
+  <body>
+    <section class="card">
+      <h3>영상 업로드 진행 중</h3>
+      <p id="status" class="muted">업로드 요청을 기다리는 중...</p>
+      <div class="bar-wrap"><div id="bar" class="bar"></div></div>
+      <p id="percent" class="muted">0%</p>
+      <div id="ok" class="ok">업로드 완료. 이 탭은 곧 닫힙니다.</div>
+      <div id="err" class="error"></div>
+    </section>
+
+    <script>
+      (function () {
+        const bar = document.getElementById('bar');
+        const percent = document.getElementById('percent');
+        const status = document.getElementById('status');
+        const okBox = document.getElementById('ok');
+        const errBox = document.getElementById('err');
+        let started = false;
+
+        function setUploadStatus(payload) {
+          localStorage.setItem('myflix_upload_status', JSON.stringify({
+            ...payload,
+            updatedAt: Date.now()
+          }));
+        }
+
+        function sendResultToOpener(result) {
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage(result, window.location.origin);
+          }
+        }
+
+        function fail(message) {
+          errBox.style.display = 'block';
+          errBox.textContent = message;
+          status.textContent = '업로드 실패';
+          setUploadStatus({ state: 'error', percent: 0, message: message });
+          sendResultToOpener({ type: 'upload-result', ok: false, error: message });
+        }
+
+        window.addEventListener('message', function (event) {
+          if (event.origin !== window.location.origin) return;
+          if (started) return;
+
+          const data = event.data || {};
+          if (!data.file || !data.action) return;
+
+          started = true;
+          status.textContent = '업로드 시작...';
+          setUploadStatus({ state: 'uploading', percent: 0, message: '업로드 시작...' });
+
+          const formData = new FormData();
+          formData.append('title', data.fields?.title || '');
+          formData.append('description', data.fields?.description || '');
+          formData.append('video_file', data.file);
+          formData.append('csrfmiddlewaretoken', data.csrfToken || '');
+
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', data.action, true);
+          xhr.setRequestHeader('X-CSRFToken', data.csrfToken || '');
+
+          xhr.upload.onprogress = function (e) {
+            if (!e.lengthComputable || e.total <= 0) {
+              status.textContent = '업로드 중...';
+              setUploadStatus({ state: 'uploading', percent: 0, message: '업로드 중...' });
+              return;
+            }
+            const p = Math.round((e.loaded / e.total) * 100);
+            bar.style.width = p + '%';
+            percent.textContent = p + '%';
+            status.textContent = '업로드 중...';
+            setUploadStatus({ state: 'uploading', percent: p, message: '업로드 중...' });
+          };
+
+          xhr.onload = function () {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              bar.style.width = '100%';
+              percent.textContent = '100%';
+              status.textContent = '업로드 완료';
+              okBox.style.display = 'block';
+
+              setUploadStatus({
+                state: 'completed',
+                percent: 100,
+                message: '업로드 완료 (영상 처리 중)',
+                detailUrl: xhr.responseURL || '',
+              });
+
+              sendResultToOpener({
+                type: 'upload-result',
+                ok: true,
+                redirectUrl: xhr.responseURL || '',
+              });
+
+              setTimeout(() => {
+                window.close();
+              }, 1500);
+              return;
+            }
+
+            const msg = xhr.status === 403
+              ? '권한 또는 보안 토큰 오류입니다. 다시 시도해 주세요.'
+              : `업로드 실패 (${xhr.status})`;
+            fail(msg);
+          };
+
+          xhr.onerror = function () {
+            fail('네트워크 오류로 업로드에 실패했습니다.');
+          };
+
+          xhr.send(formData);
+        });
+      })();
+    </script>
+  </body>
+</html>

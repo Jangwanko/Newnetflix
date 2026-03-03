@@ -1,77 +1,163 @@
-```text
-# 🎬 Newnetflix - 웹 기반 영상 스트리밍 서비스
+﻿# Newnetflix
 
-## 📌 소개
-Newnetflix는 Django + Channels + Docker를 기반으로 제작된
-**영상 스트리밍 & 업로드 서비스 플랫폼**입니다.
-실시간 WebSocket 처리, 영상 클립 관리, 사용자 인증까지 포함된
-**Full-stack 백엔드 프로젝트**입니다.
+Django 기반 영상 커뮤니티 프로젝트입니다.
+사용자는 회원가입 후 영상을 업로드할 수 있고, 다른 사용자는 영상을 시청하며 좋아요/댓글/알림 기능을 사용할 수 있습니다.
 
-## ⚙️ 주요 기술 스택
+## 주요 기능
+- 회원가입 / 로그인 / 로그아웃
+- 영상 업로드 / 수정 / 삭제
+- 영상 목록 / 상세 / 재생
+- 좋아요 / 댓글
+- 좋아요/댓글 알림
+- 영상 백그라운드 처리(`queued -> processing -> ready/failed`)
+- 업로드 진행 상태 표시(하단 고정 상태 바)
 
-| 항목 | 사용 기술 |
-|------|-----------|
-| 백엔드 | Django 5, DRF, JWT, Channels, moviepy |
-| DB | PostgreSQL |
-| 인프라 | Docker, Docker Hub, GitHub Actions |
-| 배포 | Docker 자동 배포 (main 브랜치 기준) |
-| 협업 | Git 브랜치 전략 + 기능 단위 작업
+## 기술 스택
+- Django 5
+- PostgreSQL
+- Gunicorn + Nginx
+- Docker / Docker Compose
 
-## 🚀 브랜치 전략
+---
 
+## 1) 로컬 실행
 
-┌── main      # 운영 배포용
-├── dev       # 개발 통합 테스트
-├── users     # 회원 관련 기능
-├── posts     # 게시물 CRUD 기능
-└── movies    # 영상 처리 기능
-모든 기능은 users/posts/movies 브랜치에서 개발 → dev 병합 후 → 테스트 완료 시 main 병합 → GitHub Actions로 Docker 자동 배포
+### 사전 준비
+- Docker Desktop
+- Docker Compose
 
-🛠️ 배포 흐름 요약
-개발자가 기능 브랜치에서 작업
-
-dev 브랜치에 병합 → 통합 테스트
-
-main 브랜치 병합 → 자동으로 Docker 이미지 생성
-
-Docker Hub에 jangwan/newnetflix:latest 푸시
-
-서버에서 이미지 pull → 배포 완성
-
-📦 Docker 구성
-Dockerfile로 이미지 빌드
-
-docker-compose.override.yml로 개발용 마운트 설정
-
-GitHub Secrets에 Docker 로그인 정보 저장
-
-.github/workflows/docker.yml → 자동 배포 YAML 구성
-
-
-📁 주요 앱 구조
-/users      → 회원가입, 로그인, JWT 인증
-/posts      → 게시물 작성/조회/수정/삭제
-/movies     → 영상 업로드, 클립 분할, 썸네일 생성
-
-🧪 테스트 & 로컬 실행
-docker-compose up --build
-# 또는 개발 컨테이너에서 코드 수정 시 자동 반영됨
-
-🤝 협업 전략
-기능별 브랜치 관리
-
-Pull Request 기반 리뷰
-
-main 브랜치에 병합 후만 배포 진행
-
-README.md와 .env.example 공유
-
-## 🗺️ 2. 개발 흐름도
-[개발자1 - users 기능] ↓ [개발자2 - posts 기능] ↓ [개발자3 - movies 기능] ↓
-                            ┌────────────────────────────┐
-                            │ 통합 기능 테스트 진행        │
-                            │ dev 브랜치 통합             │
-                            └────────────────────────────┘
-                            ↓ main 브랜치 병합 ↓
-GitHub Actions 실행 (.yml) ↓ Docker Hub에 이미지 푸시 ↓ 서버에서 pull + run → 배포 완료
+### 환경 파일 준비
+```bash
+cp .env.example .env
 ```
+
+### 실행
+```bash
+docker compose up --build -d
+```
+
+### 접속
+- http://localhost:18080
+
+### 종료
+```bash
+docker compose down
+```
+
+---
+
+## 2) 업로드 동작 방식
+
+- 업로드 시작 시 별도 업로드 탭에서 전송이 진행됩니다.
+- 메인 탭에서는 페이지 이동에 제약 없이 계속 탐색할 수 있습니다.
+- 진행률은 모든 페이지 하단의 `업로드 상태 바`에서 확인할 수 있습니다.
+- 업로드 완료 후 영상은 백그라운드 워커가 처리하며, 처리 상태는 목록/상세에서 확인 가능합니다.
+
+---
+
+## 3) 테스트/점검
+
+```bash
+docker compose exec -T web python manage.py check
+docker compose exec -T web python manage.py test movies posts users
+```
+
+---
+
+## 4) 배포 준비 체크리스트
+
+운영 배포 전 최소한 아래를 맞춰야 합니다.
+
+1. `DJANGO_DEBUG=False`
+2. `DJANGO_SECRET_KEY`를 강한 값으로 설정
+3. `DJANGO_ALLOWED_HOSTS`를 실제 도메인으로 설정
+4. `DJANGO_CSRF_TRUSTED_ORIGINS`를 실제 HTTPS 도메인으로 설정
+5. DB 계정/비밀번호 교체
+6. 업로드 파일 보관 정책(볼륨 또는 외부 스토리지) 확정
+
+---
+
+## 5) 운영 배포 방법 (Docker Compose)
+
+### 5-1. 서버 준비
+- Ubuntu 등 Linux 서버 준비
+- Docker / Docker Compose 설치
+- 도메인 연결
+- 방화벽에서 80/443 허용
+
+### 5-2. 코드 배포
+```bash
+git clone <your-repo>
+cd Newnetflix
+cp .env.example .env
+# .env 값을 운영 값으로 수정
+```
+
+### 5-3. 운영용 실행
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### 5-4. 확인
+```bash
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs -f web
+```
+
+---
+
+## 6) CI/CD (GitHub Actions)
+
+- `.github/workflows/docker.yml`에서 main push 시 Docker 이미지 빌드/푸시
+- 태그: `latest`, `${GITHUB_SHA}`
+- 필요한 GitHub Secrets
+  - `DOCKER_USERNAME`
+  - `DOCKER_PASSWORD`
+
+---
+
+## 7) 주요 환경변수
+
+`.env.example` 참고
+
+- Django
+  - `DJANGO_SECRET_KEY`
+  - `DJANGO_DEBUG`
+  - `DJANGO_ALLOWED_HOSTS`
+  - `DJANGO_CSRF_TRUSTED_ORIGINS`
+- DB
+  - `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`
+- Gunicorn
+  - `GUNICORN_WORKERS`
+  - `GUNICORN_TIMEOUT`
+  - `GUNICORN_GRACEFUL_TIMEOUT`
+- Worker
+  - `VIDEO_WORKER_POLL_INTERVAL`
+
+---
+
+## 8) 프로젝트 구조
+
+```text
+.github/workflows/      CI/CD
+movies/                 영상 도메인 + 백그라운드 처리 워커
+posts/                  댓글/좋아요/알림
+users/                  회원/인증
+templates/              UI 템플릿
+myflix/                 Django 설정
+nginx/                  Nginx 설정
+Dockerfile
+docker-compose.yml      로컬 실행용
+docker-compose.prod.yml 운영 실행용
+.env.example
+```
+
+---
+
+## 9) 운영 시 권장 추가 작업
+
+- HTTPS(Reverse Proxy + 인증서) 적용
+- 외부 오브젝트 스토리지(S3 등)로 media 분리
+- 모니터링/알람(Prometheus, Grafana, Sentry 등)
+- DB 백업 자동화
+- 롤백 절차 문서화

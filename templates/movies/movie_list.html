@@ -1,13 +1,22 @@
-{% extends 'base.html' %}
-{% block title %}영화 목록{% endblock %}
+﻿{% extends 'base.html' %}
+{% block title %}영상 목록{% endblock %}
 {% block content %}
-<h2>업로드된 영상</h2>
-<ul>
-  {% for movie in movies %}
-    <li><a href="{% url 'movie_detail' movie.id %}">{{ movie.title }}</a></li>
-  {% empty %}
-    <li>아직 업로드된 영상이 없습니다.</li>
-  {% endfor %}
-</ul>
-<a href="{% url 'upload_movie' %}" class="btn">영상 업로드</a>
+<section class="card">
+  <h2>업로드된 영상</h2>
+  <ul class="clean">
+    {% for movie in movies %}
+      <li style="padding: 10px 0; border-bottom: 1px solid #eee;">
+        <a href="{% url 'movie_detail' movie.id %}"><strong>{{ movie.title }}</strong></a>
+        <div class="muted">업로더: {{ movie.uploaded_by.username }} · {{ movie.uploaded_at|date:'Y-m-d H:i' }}</div>
+        <div class="muted">상태: {{ movie.get_processing_status_display }}</div>
+      </li>
+    {% empty %}
+      <li class="muted">아직 업로드된 영상이 없습니다.</li>
+    {% endfor %}
+  </ul>
+
+  {% if user.is_authenticated %}
+    <p style="margin-top: 12px;"><a href="{% url 'upload_movie' %}" class="btn">영상 업로드</a></p>
+  {% endif %}
+</section>
 {% endblock %}

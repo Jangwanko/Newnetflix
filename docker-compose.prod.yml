@@ -1,24 +1,27 @@
-services:
+﻿services:
   db:
     image: postgres:15
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: backend_user
-      POSTGRES_PASSWORD: backend_user
-      POSTGRES_DB: Django_DB
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - app-network
 
   web:
-    build: .
+    image: ${APP_IMAGE:-newnetflix-web:latest}
+    restart: unless-stopped
     depends_on:
       - db
     env_file:
       - .env
     environment:
-      GUNICORN_TIMEOUT: 600
-      GUNICORN_GRACEFUL_TIMEOUT: 60
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-600}
+      GUNICORN_GRACEFUL_TIMEOUT: ${GUNICORN_GRACEFUL_TIMEOUT:-60}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
     volumes:
       - static-data:/code/staticfiles
       - media-data:/code/media
@@ -26,14 +29,15 @@ services:
       - app-network
 
   worker:
-    build: .
+    image: ${APP_IMAGE:-newnetflix-web:latest}
+    restart: unless-stopped
     depends_on:
       - db
     env_file:
       - .env
     environment:
       APP_ROLE: worker
-      VIDEO_WORKER_POLL_INTERVAL: 3
+      VIDEO_WORKER_POLL_INTERVAL: ${VIDEO_WORKER_POLL_INTERVAL:-3}
     volumes:
       - media-data:/code/media
     networks:
@@ -41,8 +45,9 @@ services:
 
   nginx:
     image: nginx:latest
+    restart: unless-stopped
     ports:
-      - "18080:80"
+      - "80:80"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - static-data:/code/staticfiles:ro

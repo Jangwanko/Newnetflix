@@ -1,10 +1,46 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}회원가입{% endblock %}
 {% block content %}
-<h2>회원가입</h2>
-<form method="post">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit" class="btn">가입하기</button>
-</form>
+<section class="card">
+  <h2>회원가입</h2>
+
+  {% if csrf_error %}
+    <div style="margin-bottom: 12px; padding: 10px; border: 1px solid #ef4444; border-radius: 8px; background: #fef2f2; color: #991b1b;">
+      {{ csrf_error }}
+      {% if csrf_reason %}
+        <div style="margin-top: 6px; font-size: 12px;">원인: {{ csrf_reason }}</div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if form.errors %}
+    <div style="margin-bottom: 12px; padding: 10px; border: 1px solid #f59e0b; border-radius: 8px; background: #fffbeb; color: #92400e;">
+      <strong>입력값을 확인해 주세요.</strong>
+      <ul style="margin: 8px 0 0 18px;">
+        {% for field in form %}
+          {% for error in field.errors %}
+            <li>{{ field.label }}: {{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <p>
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}
+          <small class="muted">{{ field.help_text }}</small>
+        {% endif %}
+      </p>
+    {% endfor %}
+    <button type="submit" class="btn">가입하기</button>
+  </form>
+</section>
 {% endblock %}

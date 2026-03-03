@@ -1,11 +1,112 @@
-{% extends 'base.html' %}
-{% block title %}영상 업로드{% endblock %}
+﻿{% extends 'base.html' %}
+{% block title %}{% if movie %}영상 수정{% else %}영상 업로드{% endif %}{% endblock %}
 {% block content %}
-<h2>영상 업로드</h2>
-<form method="post" enctype="multipart/form-data">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit" class="btn">저장</button>
-</form>
-<a href="{% url 'movie_list' %}" class="btn">목록으로 돌아가기</a>
+<section class="card" style="margin-bottom: 16px;">
+  <h2>{% if movie %}영상 수정{% else %}영상 업로드{% endif %}</h2>
+
+  <form id="movie-upload-form" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+
+    <div id="upload-info" style="display:none; margin: 10px 0; padding: 10px; border: 1px solid #2563eb; border-radius: 8px; background: #eff6ff; color: #1e3a8a;"></div>
+    <div id="upload-error" style="display:none; margin: 10px 0; padding: 10px; border: 1px solid #ef4444; border-radius: 8px; background: #fef2f2; color: #991b1b;"></div>
+
+    <button id="upload-submit" type="submit" class="btn">저장</button>
+    <a href="{% url 'movie_list' %}" class="btn secondary">목록으로</a>
+  </form>
+</section>
+
+<script>
+(function () {
+  const form = document.getElementById('movie-upload-form');
+  const submitBtn = document.getElementById('upload-submit');
+  const infoBox = document.getElementById('upload-info');
+  const errorBox = document.getElementById('upload-error');
+  const workerUrl = '{% url "upload_worker" %}';
+
+  if (!form) return;
+
+  function setUploadStatus(payload) {
+    localStorage.setItem('myflix_upload_status', JSON.stringify({
+      ...payload,
+      updatedAt: Date.now()
+    }));
+  }
+
+  function openWorkerAndSend(payload) {
+    const workerWindow = window.open(workerUrl, '_blank');
+    if (!workerWindow) {
+      throw new Error('팝업/새 탭이 차단되어 업로드 창을 열 수 없습니다.');
+    }
+
+    let attempts = 0;
+    const maxAttempts = 20;
+    const timer = setInterval(() => {
+      attempts += 1;
+      try {
+        workerWindow.postMessage(payload, window.location.origin);
+      } catch (e) {
+        // Ignore and retry.
+      }
+      if (attempts >= maxAttempts) {
+        clearInterval(timer);
+      }
+    }, 250);
+
+    return workerWindow;
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    errorBox.style.display = 'none';
+    errorBox.textContent = '';
+    infoBox.style.display = 'none';
+    infoBox.textContent = '';
+
+    const fileInput = form.querySelector('input[type="file"][name="video_file"]');
+    const hasSelectedFile = fileInput && fileInput.files && fileInput.files.length > 0;
+
+    // 수정 화면에서 파일 변경이 없는 경우에는 일반 submit 처리.
+    if (!hasSelectedFile) {
+      form.submit();
+      return;
+    }
+
+    const titleInput = form.querySelector('input[name="title"]');
+    const descriptionInput = form.querySelector('textarea[name="description"]');
+    const csrfInput = form.querySelector('input[name="csrfmiddlewaretoken"]');
+
+    const payload = {
+      action: window.location.href,
+      csrfToken: csrfInput ? csrfInput.value : '',
+      fields: {
+        title: titleInput ? titleInput.value : '',
+        description: descriptionInput ? descriptionInput.value : ''
+      },
+      file: fileInput.files[0]
+    };
+
+    try {
+      submitBtn.disabled = true;
+      openWorkerAndSend(payload);
+
+      setUploadStatus({
+        state: 'starting',
+        percent: 0,
+        message: '업로드 탭을 열고 있습니다...',
+        workerUrl: workerUrl,
+      });
+
+      infoBox.style.display = 'block';
+      infoBox.innerHTML = '업로드가 새 탭에서 시작되었습니다. 현재 페이지를 자유롭게 이동해도 업로드는 계속됩니다.';
+      submitBtn.disabled = false;
+    } catch (err) {
+      submitBtn.disabled = false;
+      errorBox.style.display = 'block';
+      errorBox.textContent = err.message || '업로드를 시작하지 못했습니다.';
+    }
+  });
+})();
+</script>
 {% endblock %}

@@ -1,78 +1,139 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}MyFlix{% endblock %}</title>
     <style>
       body {
         font-family: Arial, sans-serif;
         margin: 0;
-        padding: 0;
+        background: #f5f6f8;
+        color: #222;
       }
+
       nav {
-        background-color: #f8f9fa;
-        padding: 10px 20px;
-        border-bottom: 1px solid #ddd;
+        background: #111827;
+        color: #fff;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
       }
-      nav a, nav span, nav form {
-        margin-right: 10px;
-        display: inline-block;
-        vertical-align: middle;
+
+      nav a,
+      nav span,
+      nav form,
+      nav button {
+        color: #fff;
         text-decoration: none;
-        color: #333;
+        margin: 0;
       }
+
+      nav .brand {
+        font-weight: 700;
+        margin-right: 8px;
+      }
+
+      nav .spacer {
+        flex: 1;
+      }
+
       nav form {
-        margin: 0;
+        display: inline;
       }
-      .notification {
-        background-color: #fff3cd;
-        padding: 10px 20px;
-        border: 1px solid #ffeeba;
-        margin: 10px 20px;
-        border-radius: 5px;
+
+      nav button {
+        background: #1f2937;
+        border: 1px solid #374151;
+        border-radius: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
       }
-      .notification ul {
-        margin: 0;
-        padding-left: 0;
+
+      .container {
+        max-width: 980px;
+        margin: 20px auto;
+        padding: 0 16px;
+      }
+
+      .card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 16px;
+      }
+
+      .btn {
+        display: inline-block;
+        background: #111827;
+        color: #fff;
+        border: 1px solid #111827;
+        border-radius: 8px;
+        padding: 8px 12px;
+        text-decoration: none;
+        cursor: pointer;
+      }
+
+      .btn.secondary {
+        background: #fff;
+        color: #111827;
+      }
+
+      input,
+      textarea,
+      select {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 8px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        margin-top: 4px;
+      }
+
+      ul.clean {
         list-style: none;
+        padding: 0;
+        margin: 0;
       }
+
+      .notification {
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 16px;
+      }
+
       .notification li {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 5px;
+        gap: 8px;
+        margin-top: 8px;
       }
+
       .notification a {
-        color: #856404;
+        color: #92400e;
         text-decoration: none;
-        flex-grow: 1;
       }
-      .notification a:hover {
-        text-decoration: underline;
-      }
-      .notification form {
-        margin-left: 10px;
-      }
-      .notification button {
-        background: none;
-        border: none;
-        color: #dc3545;
-        font-weight: bold;
-        cursor: pointer;
-        font-size: 14px;
-      }
-      main {
-        padding: 20px;
+
+      .muted {
+        color: #6b7280;
       }
     </style>
   </head>
   <body>
     <nav>
-      <a href="{% url 'home' %}">홈</a>
-
+      <a href="{% url 'home' %}" class="brand">MyFlix</a>
+      <a href="{% url 'movie_list' %}">영상 목록</a>
       {% if user.is_authenticated %}
-        <span>{{ user.username }}님</span>
-        <form action="{% url 'logout' %}" method="post" style="display:inline;">
+        <a href="{% url 'upload_movie' %}">영상 업로드</a>
+      {% endif %}
+      <span class="spacer"></span>
+      {% if user.is_authenticated %}
+        <span>{{ user.username }} 님</span>
+        <form action="{% url 'logout' %}" method="post">
           {% csrf_token %}
           <button type="submit">로그아웃</button>
         </form>
@@ -82,27 +143,105 @@
       {% endif %}
     </nav>
 
-    {% if user.is_authenticated and unread_notifications %}
-      <div class="notification">
-        <strong>🔔 알림</strong>
-        <ul>
-          {% for noti in unread_notifications %}
-            <li>
-              <a href="{% url 'read_notification' noti.id %}">
-                {{ noti.message }}
-              </a>
-              <form action="{% url 'delete_notification' noti.id %}" method="post">
-                {% csrf_token %}
-                <button type="submit" title="알림 삭제">✖</button>
-              </form>
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
-    {% endif %}
+    <main class="container">
+      {% if messages %}
+        <section class="card" style="margin-bottom: 16px;">
+          <ul class="clean">
+            {% for message in messages %}
+              <li>{{ message }}</li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
 
-    <main>
+      {% if user.is_authenticated and unread_notifications %}
+        <section class="notification">
+          <strong>새 알림</strong>
+          <ul class="clean">
+            {% for noti in unread_notifications %}
+              <li>
+                <a href="{% url 'read_notification' noti.id %}">{{ noti.message }}</a>
+                <form action="{% url 'delete_notification' noti.id %}" method="post">
+                  {% csrf_token %}
+                  <button type="submit" class="btn secondary">삭제</button>
+                </form>
+              </li>
+            {% endfor %}
+          </ul>
+        </section>
+      {% endif %}
+
       {% block content %}{% endblock %}
     </main>
+
+    <div id="global-upload-status" style="display:none; position: fixed; right: 16px; bottom: 16px; width: 320px; z-index: 1200; background: #fff; border: 1px solid #d1d5db; border-radius: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.12); padding: 12px;">
+      <div style="display:flex; justify-content:space-between; gap:8px; align-items:center;">
+        <strong style="font-size: 14px;">업로드 상태</strong>
+        <button id="global-upload-close" type="button" style="border:0; background:none; cursor:pointer; font-size:16px; line-height:1;">x</button>
+      </div>
+      <div id="global-upload-message" class="muted" style="margin-top: 6px; font-size: 13px;">대기 중</div>
+      <div style="height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-top: 8px;">
+        <div id="global-upload-bar" style="height: 100%; width: 0%; background: #2563eb; transition: width 0.15s ease;"></div>
+      </div>
+      <div style="margin-top: 8px; display:flex; justify-content:space-between; align-items:center;">
+        <span id="global-upload-percent" class="muted" style="font-size: 12px;">0%</span>
+        <a id="global-upload-link" href="#" style="font-size: 12px; display:none;">영상 보기</a>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const box = document.getElementById('global-upload-status');
+        const closeBtn = document.getElementById('global-upload-close');
+        const bar = document.getElementById('global-upload-bar');
+        const message = document.getElementById('global-upload-message');
+        const percent = document.getElementById('global-upload-percent');
+        const link = document.getElementById('global-upload-link');
+        if (!box) return;
+
+        function renderStatus() {
+          const raw = localStorage.getItem('myflix_upload_status');
+          if (!raw) {
+            box.style.display = 'none';
+            return;
+          }
+
+          let status;
+          try {
+            status = JSON.parse(raw);
+          } catch (e) {
+            box.style.display = 'none';
+            return;
+          }
+
+          if (!status || !status.state) {
+            box.style.display = 'none';
+            return;
+          }
+
+          const p = Math.max(0, Math.min(100, Number(status.percent || 0)));
+          box.style.display = 'block';
+          bar.style.width = p + '%';
+          percent.textContent = p + '%';
+          message.textContent = status.message || '업로드 진행 중';
+
+          if (status.detailUrl) {
+            link.style.display = 'inline';
+            link.href = status.detailUrl;
+          } else {
+            link.style.display = 'none';
+            link.removeAttribute('href');
+          }
+        }
+
+        closeBtn.addEventListener('click', function () {
+          localStorage.removeItem('myflix_upload_status');
+          box.style.display = 'none';
+        });
+
+        setInterval(renderStatus, 500);
+        renderStatus();
+      })();
+    </script>
   </body>
 </html>

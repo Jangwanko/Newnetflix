@@ -1,6 +1,8 @@
+﻿from django.conf import settings
 from django.db import models
-from django.conf import settings
+
 from movies.models import Movie
+
 
 class Comment(models.Model):
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='comments')
@@ -8,12 +10,13 @@ class Comment(models.Model):
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
+
 class Like(models.Model):
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='likes')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
-class Meta:
-    unique_together = ('movie', 'user')  # 중복 좋아요 방지
+    class Meta:
+        unique_together = ('movie', 'user')
 
 
 class Notification(models.Model):

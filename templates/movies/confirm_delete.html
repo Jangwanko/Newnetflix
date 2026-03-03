@@ -1,0 +1,13 @@
+﻿{% extends 'base.html' %}
+{% block title %}영상 삭제{% endblock %}
+{% block content %}
+<section class="card">
+  <h2>영상 삭제</h2>
+  <p><strong>{{ movie.title }}</strong> 영상을 삭제하시겠습니까?</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn">삭제</button>
+    <a href="{% url 'movie_detail' movie.id %}" class="btn secondary">취소</a>
+  </form>
+</section>
+{% endblock %}

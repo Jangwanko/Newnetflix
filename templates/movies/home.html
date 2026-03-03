@@ -1,11 +1,16 @@
-{% extends 'base.html' %}
+﻿{% extends 'base.html' %}
 {% block title %}홈{% endblock %}
 {% block content %}
-<h2>MyFlix에 오신 것을 환영합니다!</h2>
-
-{% if user.is_authenticated %}
-  <a href="{% url 'upload_movie' %}" class="btn">영상 업로드</a>
-{% endif %}
-
-<a href="{% url 'movie_list' %}" class="btn">영화 목록 보기</a>
+<section class="card">
+  <h2>회원 업로드 기반 영상 플랫폼</h2>
+  <p class="muted">회원가입 후 영상을 업로드하고, 서로 댓글과 좋아요를 남길 수 있습니다.</p>
+  <p>
+    <a href="{% url 'movie_list' %}" class="btn">영상 목록 보기</a>
+    {% if user.is_authenticated %}
+      <a href="{% url 'upload_movie' %}" class="btn secondary">영상 업로드</a>
+    {% else %}
+      <a href="{% url 'signup' %}" class="btn secondary">회원가입</a>
+    {% endif %}
+  </p>
+</section>
 {% endblock %}
