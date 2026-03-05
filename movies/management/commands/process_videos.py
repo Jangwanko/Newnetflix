@@ -6,6 +6,7 @@ from django.db import OperationalError, transaction
 from moviepy import VideoFileClip
 
 from movies.models import Movie
+from myflix.metrics import record_video_processing_transition
 
 
 class Command(BaseCommand):
@@ -27,7 +28,6 @@ class Command(BaseCommand):
             try:
                 movie = self._pick_next_movie()
             except OperationalError:
-                # DB might not be ready yet; retry until available.
                 time.sleep(poll_interval)
                 continue
 
@@ -51,6 +51,7 @@ class Command(BaseCommand):
             movie.processing_status = Movie.ProcessingStatus.PROCESSING
             movie.processing_error = ""
             movie.save(update_fields=["processing_status", "processing_error"])
+            record_video_processing_transition(Movie.ProcessingStatus.PROCESSING)
             return movie
 
     def _process_movie(self, movie):
@@ -62,9 +63,11 @@ class Command(BaseCommand):
             movie.processing_status = Movie.ProcessingStatus.READY
             movie.processing_error = ""
             movie.save(update_fields=["duration_seconds", "processing_status", "processing_error"])
+            record_video_processing_transition(Movie.ProcessingStatus.READY)
             self.stdout.write(self.style.SUCCESS(f"Processed movie #{movie.id}: {movie.title}"))
         except Exception as exc:
             movie.processing_status = Movie.ProcessingStatus.FAILED
             movie.processing_error = str(exc)[:500]
             movie.save(update_fields=["processing_status", "processing_error"])
+            record_video_processing_transition(Movie.ProcessingStatus.FAILED)
             self.stderr.write(self.style.ERROR(f"Failed movie #{movie.id}: {exc}"))

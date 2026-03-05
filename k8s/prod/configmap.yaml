@@ -1,0 +1,24 @@
+﻿apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: myflix-config
+  namespace: myflix
+data:
+  DJANGO_DEBUG: "False"
+  DJANGO_ALLOWED_HOSTS: "myflix.example.com"
+  DJANGO_CSRF_TRUSTED_ORIGINS: "https://myflix.example.com"
+
+  DB_HOST: "replace-with-rds-endpoint"
+  DB_PORT: "5432"
+  DB_NAME: "myflix"
+  DB_USER: "myflix_user"
+
+  USE_S3: "True"
+  AWS_REGION: "ap-northeast-2"
+  AWS_STORAGE_BUCKET_NAME: "replace-with-media-bucket"
+  AWS_QUERYSTRING_AUTH: "False"
+
+  GUNICORN_WORKERS: "3"
+  GUNICORN_TIMEOUT: "600"
+  GUNICORN_GRACEFUL_TIMEOUT: "60"
+  VIDEO_WORKER_POLL_INTERVAL: "3"

@@ -1,7 +1,9 @@
-asgiref==3.8.1
+﻿asgiref==3.8.1
+boto3==1.39.11
 channels==4.2.2
 channels_redis==4.2.1
 Django==5.2.1
+django-storages==1.14.4
 djangorestframework==3.16.0
 djangorestframework_simplejwt==5.5.0
 gunicorn==23.0.0
@@ -11,10 +13,11 @@ moviepy==2.1.2
 numpy==2.2.5
 pillow==10.4.0
 proglog==0.1.12
+prometheus-client==0.22.1
 psycopg2-binary==2.9.10
 python-decouple==3.8
 python-dotenv==1.1.0
-redis==6.1.0      # 직접 import하지 않으면 제거 가능
+redis==6.1.0
 sqlparse==0.5.3
 tqdm==4.67.1
 tzdata==2025.2

@@ -15,6 +15,18 @@
     {% endfor %}
   </ul>
 
+  {% if page_obj.paginator.num_pages > 1 %}
+    <nav style="margin-top: 12px; display: flex; gap: 8px; align-items: center;">
+      {% if page_obj.has_previous %}
+        <a class="btn secondary" href="?page={{ page_obj.previous_page_number }}">이전</a>
+      {% endif %}
+      <span class="muted">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+      {% if page_obj.has_next %}
+        <a class="btn secondary" href="?page={{ page_obj.next_page_number }}">다음</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+
   {% if user.is_authenticated %}
     <p style="margin-top: 12px;"><a href="{% url 'upload_movie' %}" class="btn">영상 업로드</a></p>
   {% endif %}

@@ -3,14 +3,30 @@ __pycache__/
 *.py[cod]
 *.pyo
 
+# Virtualenv
+venv/
+.venv/
+
 # Django generated
 staticfiles/
 media/
 db.sqlite3
 
 # Local environment files
+.env
 .env.local
 .env.prod
 
-# Tooling
-.git/
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# OS/IDE
+.DS_Store
+Thumbs.db

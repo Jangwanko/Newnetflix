@@ -1,0 +1,5 @@
+﻿bucket         = "replace-with-your-terraform-state-bucket"
+key            = "myflix/prod/terraform.tfstate"
+region         = "ap-northeast-2"
+dynamodb_table = "replace-with-your-tf-lock-table"
+encrypt        = true
