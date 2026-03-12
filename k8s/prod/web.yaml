@@ -14,16 +14,35 @@ spec:
         app: web
     spec:
       serviceAccountName: myflix-app
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: web
-          image: <aws_account_id>.dkr.ecr.<region>.amazonaws.com/myflix-prod-app:latest
+          image: myflix-app:latest
           ports:
             - containerPort: 8000
+              name: http
+          env:
+            - name: RUN_MIGRATIONS
+              value: "false"
+            - name: RUN_COLLECTSTATIC
+              value: "true"
           envFrom:
             - configMapRef:
                 name: myflix-config
             - secretRef:
                 name: myflix-secret
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
           readinessProbe:
             httpGet:
               path: /readyz
@@ -43,12 +62,30 @@ spec:
             limits:
               cpu: "1500m"
               memory: "1Gi"
+          startupProbe:
+            httpGet:
+              path: /livez
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 5
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: staticfiles
+              mountPath: /code/staticfiles
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: staticfiles
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: web
   namespace: myflix
+  labels:
+    app: web
 spec:
   selector:
     app: web

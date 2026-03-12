@@ -13,10 +13,18 @@ data:
   DB_NAME: "myflix"
   DB_USER: "myflix_user"
 
+  ENABLE_REDIS_CACHE: "True"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "1"
+
   USE_S3: "True"
   AWS_REGION: "ap-northeast-2"
   AWS_STORAGE_BUCKET_NAME: "replace-with-media-bucket"
   AWS_QUERYSTRING_AUTH: "False"
+
+  SESSION_COOKIE_SECURE: "True"
+  CSRF_COOKIE_SECURE: "True"
 
   GUNICORN_WORKERS: "3"
   GUNICORN_TIMEOUT: "600"

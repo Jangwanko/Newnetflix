@@ -12,6 +12,7 @@ def _env_bool(name: str, default: bool = False) -> bool:
 
 DEBUG = _env_bool("DJANGO_DEBUG", _env_bool("DEBUG", False))
 USE_S3 = _env_bool("USE_S3", False)
+ENABLE_REDIS_CACHE = _env_bool("ENABLE_REDIS_CACHE", False)
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY") or os.getenv("SECRET_KEY")
 if not SECRET_KEY:
@@ -109,6 +110,10 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "login"
 
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SECURE = _env_bool("SESSION_COOKIE_SECURE", not DEBUG)
+CSRF_COOKIE_SECURE = _env_bool("CSRF_COOKIE_SECURE", not DEBUG)
+
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
@@ -139,6 +144,25 @@ if USE_S3:
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"
+
+if ENABLE_REDIS_CACHE:
+    redis_url = os.getenv("REDIS_URL")
+    if not redis_url:
+        redis_host = os.getenv("REDIS_HOST", "redis")
+        redis_port = os.getenv("REDIS_PORT", "6379")
+        redis_db = os.getenv("REDIS_DB", "1")
+        redis_password = os.getenv("REDIS_PASSWORD")
+        if redis_password:
+            redis_url = f"redis://:{redis_password}@{redis_host}:{redis_port}/{redis_db}"
+        else:
+            redis_url = f"redis://{redis_host}:{redis_port}/{redis_db}"
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": redis_url,
+        }
+    }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 CSRF_FAILURE_VIEW = "users.views.csrf_failure"

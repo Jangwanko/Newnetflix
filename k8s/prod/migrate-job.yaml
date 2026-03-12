@@ -1,19 +1,18 @@
-﻿apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: worker
+  name: db-migrate
   namespace: myflix
 spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: worker
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 3
   template:
     metadata:
       labels:
-        app: worker
+        app: db-migrate
     spec:
       serviceAccountName: myflix-app
+      restartPolicy: OnFailure
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -22,15 +21,13 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: worker
+        - name: migrate
           image: myflix-app:latest
           env:
-            - name: APP_ROLE
-              value: worker
             - name: RUN_MIGRATIONS
-              value: "false"
+              value: "true"
             - name: RUN_COLLECTSTATIC
-              value: "false"
+              value: "true"
           envFrom:
             - configMapRef:
                 name: myflix-config
@@ -42,16 +39,13 @@ spec:
             capabilities:
               drop:
                 - ALL
-          resources:
-            requests:
-              cpu: "250m"
-              memory: "256Mi"
-            limits:
-              cpu: "1500m"
-              memory: "1Gi"
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            - name: staticfiles
+              mountPath: /code/staticfiles
       volumes:
         - name: tmp
+          emptyDir: {}
+        - name: staticfiles
           emptyDir: {}

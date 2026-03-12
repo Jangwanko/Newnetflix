@@ -112,6 +112,10 @@ resource "random_password" "django_secret" {
   special = true
 }
 
+resource "random_password" "redis_password" {
+  length  = 32
+  special = true
+}
 resource "aws_db_subnet_group" "this" {
   name       = "${local.name}-db-subnets"
   subnet_ids = module.vpc.private_subnets
@@ -149,7 +153,7 @@ resource "aws_db_instance" "postgres" {
 
 resource "aws_ecr_repository" "app" {
   name                 = "${local.name}-app"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
@@ -204,6 +208,7 @@ resource "aws_secretsmanager_secret_version" "app" {
   secret_string = jsonencode({
     django_secret_key = random_password.django_secret.result
     db_password       = random_password.db_password.result
+    redis_password    = random_password.redis_password.result
     db_host           = aws_db_instance.postgres.address
     db_port           = aws_db_instance.postgres.port
     db_name           = var.db_name

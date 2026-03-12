@@ -16,7 +16,11 @@
 - 업로드 실측(로그인 후 실제 업로드 1건):
   - `myflix_movie_upload_requests_total{result="success"} = 1`
   - `myflix_movie_upload_duration_seconds_sum = 0.0024`
-  - 업로드 파일은 더미 바이트를 사용해 worker 처리에서 실패(코덱/파일 손상) 확인
+- 업로드 파일은 더미 바이트를 사용해 worker 처리에서 실패(코덱/파일 손상) 확인
+
+## 1-2. 운영 환경 측정 계획
+- 운영 측정은 프로덕션 Prometheus 기반으로 월 1회 리포트
+- 기준 데이터가 부족하면 SLO 목표를 보수적으로 조정
 
 ## 2. 현재 SLO 목표(실측 기반 1차)
 - Browse API 가용성(5xx 기준): 99.9% (30일)
@@ -40,3 +44,7 @@
 - 주간: RED 지표 리포트 (p95/p99/5xx/트래픽)
 - 월간: SLO 목표 재설정 검토
 - 릴리즈 전: 장애 시나리오 리허설 결과 반영
+
+## 6. Alert 연동
+- `MyflixHigh5xxRate` -> SLO 5xx 예산 소진 신호
+- `MyflixHighLatencyP95/P99` -> Latency SLO 위반 가능성

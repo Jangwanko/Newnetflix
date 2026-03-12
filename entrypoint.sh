@@ -8,6 +8,8 @@ VIDEO_WORKER_POLL_INTERVAL="${VIDEO_WORKER_POLL_INTERVAL:-3}"
 GUNICORN_WORKERS="${GUNICORN_WORKERS:-3}"
 GUNICORN_TIMEOUT="${GUNICORN_TIMEOUT:-600}"
 GUNICORN_GRACEFUL_TIMEOUT="${GUNICORN_GRACEFUL_TIMEOUT:-60}"
+RUN_MIGRATIONS="${RUN_MIGRATIONS:-true}"
+RUN_COLLECTSTATIC="${RUN_COLLECTSTATIC:-true}"
 
 echo "Waiting for PostgreSQL at ${DB_HOST}:${DB_PORT}..."
 until nc -z "$DB_HOST" "$DB_PORT"; do
@@ -20,11 +22,15 @@ if [ "$APP_ROLE" = "worker" ]; then
   exec python manage.py process_videos --poll-interval "$VIDEO_WORKER_POLL_INTERVAL"
 fi
 
-echo "Running migrations..."
-python manage.py migrate --noinput
+if [ "$RUN_MIGRATIONS" = "true" ]; then
+  echo "Running migrations..."
+  python manage.py migrate --noinput
+fi
 
-echo "Collecting static files..."
-python manage.py collectstatic --noinput
+if [ "$RUN_COLLECTSTATIC" = "true" ]; then
+  echo "Collecting static files..."
+  python manage.py collectstatic --noinput
+fi
 
 echo "Starting Gunicorn..."
 exec gunicorn myflix.wsgi:application \

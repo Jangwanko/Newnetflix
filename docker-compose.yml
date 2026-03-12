@@ -1,6 +1,8 @@
 services:
-  db:
-    image: postgres:15
+  postgres:
+    build:
+      context: .
+      dockerfile: docker/postgres.Dockerfile
     environment:
       POSTGRES_USER: backend_user
       POSTGRES_PASSWORD: backend_user
@@ -10,15 +12,32 @@ services:
     networks:
       - app-network
 
-  web:
-    build: .
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
     depends_on:
-      - db
+      - postgres
+      - redis
     env_file:
       - .env
     environment:
+      DB_HOST: postgres
       GUNICORN_TIMEOUT: 600
       GUNICORN_GRACEFUL_TIMEOUT: 60
+      RUN_COLLECTSTATIC: "False"
+      ENABLE_REDIS_CACHE: "True"
+      REDIS_URL: redis://redis:6379/1
+      SESSION_COOKIE_SECURE: "False"
+      CSRF_COOKIE_SECURE: "False"
     volumes:
       - static-data:/code/staticfiles
       - media-data:/code/media
@@ -26,36 +45,104 @@ services:
       - app-network
 
   worker:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
     depends_on:
-      - db
+      - postgres
+      - redis
     env_file:
       - .env
     environment:
+      DB_HOST: postgres
       APP_ROLE: worker
       VIDEO_WORKER_POLL_INTERVAL: 3
+      RUN_COLLECTSTATIC: "False"
+      RUN_MIGRATIONS: "False"
+      ENABLE_REDIS_CACHE: "True"
+      REDIS_URL: redis://redis:6379/1
     volumes:
       - media-data:/code/media
     networks:
       - app-network
 
-  nginx:
-    image: nginx:latest
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    depends_on:
+      - backend
     ports:
       - "18080:80"
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - static-data:/code/staticfiles:ro
-      - media-data:/code/media:ro
+      - static-data:/usr/share/nginx/html/static:ro
+    networks:
+      - app-network
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: ["observability"]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    ports:
+      - "19090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./k8s/monitoring/prometheus-rules.yaml:/etc/prometheus/rules/red-alerts.yml:ro
+      - prometheus-data:/prometheus
+    networks:
+      - app-network
+
+  loki:
+    image: grafana/loki:3.1.1
+    profiles: ["observability"]
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "13100:3100"
+    volumes:
+      - ./observability/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    networks:
+      - app-network
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    profiles: ["observability"]
+    command: ["-config.file=/etc/promtail/config.yml"]
+    volumes:
+      - ./observability/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    profiles: ["observability"]
+    ports:
+      - "13000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
     depends_on:
-      - web
+      - prometheus
+      - loki
     networks:
       - app-network
 
 volumes:
   postgres-data:
+  redis-data:
   static-data:
   media-data:
+  prometheus-data:
+  loki-data:
+  grafana-data:
 
 networks:
   app-network:

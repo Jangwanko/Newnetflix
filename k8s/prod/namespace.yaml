@@ -2,3 +2,7 @@
 kind: Namespace
 metadata:
   name: myflix
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
