@@ -157,6 +157,52 @@ kubectl apply -k k8s/observability
 
 ---
 
+## 장애 리허설 결과 (로컬)
+
+실행 일시: 2026-03-13 (KST)
+
+### 시나리오 1: DB 장애
+재현:
+```bash
+docker compose stop postgres
+```
+관측:
+- `/readyz` -> 503 (DB dependency error)
+- `/` -> 200 (웹은 응답하나 DB 의존 기능은 영향 가능)
+복구:
+```bash
+docker compose start postgres
+```
+복구 후 `/readyz` 200 확인
+
+### 시나리오 2: Worker 중단
+재현:
+```bash
+docker compose stop worker
+```
+관측:
+- `/readyz` -> 200
+- 업로드/비동기 처리 지연 가능
+복구:
+```bash
+docker compose start worker
+```
+
+### 시나리오 3: Web 중단
+재현:
+```bash
+docker compose stop backend
+```
+관측:
+- `/` 요청 타임아웃 발생 (nginx access log 기준 499)
+복구:
+```bash
+docker compose start backend
+```
+복구 후 `/` 200 확인
+
+---
+
 ## CI/CD
 
 `main` 브랜치 push 시 GitHub Actions가 아래를 수행합니다.
@@ -180,11 +226,16 @@ kubectl apply -k k8s/observability
 - 아키텍처: `docs/architecture.md`
 - SLO: `docs/slo.md`
 - 장애 시나리오: `docs/failure-scenarios.md`
+- 장애 리허설 로그: `docs/drill-log.md`
+- 인시던트 리포트 템플릿: `docs/incident-report.md`
 - Runbook: `docs/runbook.md`
 - DR: `docs/dr.md`
 - Capacity: `docs/capacity.md`
 - Cost: `docs/cost.md`
 - Security: `docs/security.md`
+- Release 전략: `docs/release-strategy.md`
+- 성능 테스트: `docs/perf-test.md`
+- 운영 증거 가이드: `docs/ops-evidence.md`
 
 ---
 
