@@ -210,7 +210,7 @@ docker compose start backend
 - Terraform fmt/validate
 - Trivy filesystem scan
 - ECR 이미지 빌드/푸시
-- EKS 배포
+- (포트폴리오 안전모드) 배포는 수동 승인 시에만 실행
 
 필수 GitHub Secret:
 - `AWS_ROLE_TO_ASSUME` (OIDC AssumeRole ARN)
@@ -218,6 +218,20 @@ docker compose start backend
 
 워크플로우 파일:
 - `.github/workflows/docker.yml`
+
+### 포트폴리오 안전모드 (자동 배포 차단)
+실제 AWS에 무의식적으로 배포되는 것을 방지하기 위해 `deploy` 잡을 **수동 실행**으로 제한했습니다.
+또한 `environment: production`은 예시로만 남기기 위해 워크플로우에서 주석 처리했습니다.
+
+배포 조건:
+- GitHub Actions에서 **수동 실행**(`workflow_dispatch`)
+- 입력값 `deploy=true` 일 때만 배포 실행
+
+### 실제 배포로 전환하는 방법
+아래 중 하나를 선택할 수 있습니다.
+1. 현재 구조 유지: Actions에서 수동 실행 시 `deploy=true`로 배포
+2. 자동 배포 복원: `.github/workflows/docker.yml`의 `deploy` 잡 조건을 제거
+   - 제거 대상: `if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'true' }}`
 
 ---
 
