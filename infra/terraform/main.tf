@@ -116,6 +116,7 @@ resource "random_password" "redis_password" {
   length  = 32
   special = true
 }
+
 resource "aws_db_subnet_group" "this" {
   name       = "${local.name}-db-subnets"
   subnet_ids = module.vpc.private_subnets
@@ -125,13 +126,13 @@ resource "aws_db_subnet_group" "this" {
 resource "aws_db_instance" "postgres" {
   identifier = "${local.name}-postgres"
 
-  engine               = "postgres"
-  engine_version       = "15.10"
-  instance_class       = var.db_instance_class
-  allocated_storage    = var.db_allocated_storage
+  engine                = "postgres"
+  engine_version        = "15.10"
+  instance_class        = var.db_instance_class
+  allocated_storage     = var.db_allocated_storage
   max_allocated_storage = var.db_allocated_storage + 200
-  storage_type         = "gp3"
-  storage_encrypted    = true
+  storage_type          = "gp3"
+  storage_encrypted     = true
 
   db_name  = var.db_name
   username = var.db_username
@@ -140,11 +141,11 @@ resource "aws_db_instance" "postgres" {
   db_subnet_group_name   = aws_db_subnet_group.this.name
   vpc_security_group_ids = [aws_security_group.rds.id]
 
-  multi_az               = var.db_multi_az
+  multi_az                = var.db_multi_az
   backup_retention_period = 7
-  deletion_protection    = true
-  skip_final_snapshot    = false
-  publicly_accessible    = false
+  deletion_protection     = true
+  skip_final_snapshot     = false
+  publicly_accessible     = false
 
   performance_insights_enabled = true
 
