@@ -35,6 +35,7 @@ docker compose exec -T web python manage.py test movies posts users
 ---
 
 ## AWS 운영 배포 (Terraform + EKS)
+포트폴리오 모드에서는 Terraform은 실행하지 않으며, 구성 파일만 보존합니다.
 
 ### 1) 사전 준비
 - AWS 계정, IAM 권한(Administrator 수준 또는 동등 권한)

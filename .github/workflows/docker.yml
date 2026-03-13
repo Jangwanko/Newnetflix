@@ -79,6 +79,7 @@ jobs:
 
   infra-validate:
     runs-on: ubuntu-latest
+    if: ${{ false }} # portfolio mode: skip terraform validation
 
     steps:
       - name: Checkout
