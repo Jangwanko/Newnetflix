@@ -1,0 +1,21 @@
+scenario,run,success,fail_reason,detected_seconds,promoted_seconds,rto_seconds,rejoin_seconds,pgpool_recovery_seconds,split_brain,primary_count_end,standby_count_end,integrity_ok,txid_before,txid_after,marker_exists_after,readyz_5xx_count,readyz_non200_count,readyz_avg_ms,readyz_p95_ms,alert_fired,alert_cleared_after,deleted_pod,promoted_pod,started_at,finished_at
+primary_failover,1,True,,0.16,0.16,18.34,31.31,38.18,False,1,2,True,938,954,True,1,1,64.43,244.82,False,True,postgres-ha-1,postgres-ha-0,2026-03-24T13:21:47.388187+00:00,2026-03-24T13:25:42.710060+00:00
+primary_failover,2,True,,0.24,0.24,27.57,31.45,42.28,False,1,2,True,956,972,True,16,16,101.17,1057.95,False,True,postgres-ha-0,postgres-ha-1,2026-03-24T13:25:44.710445+00:00,2026-03-24T13:28:59.317234+00:00
+primary_failover,3,True,,0.22,0.22,21.73,31.15,48.52,False,1,2,True,974,989,True,1,1,49.6,186.98,False,True,postgres-ha-1,postgres-ha-0,2026-03-24T13:29:01.317503+00:00,2026-03-24T13:31:29.626367+00:00
+primary_failover,4,True,,0.21,0.21,27.43,31.36,43.48,False,1,2,True,991,1007,True,0,0,228.62,1043.74,False,True,postgres-ha-0,postgres-ha-1,2026-03-24T13:31:31.626814+00:00,2026-03-24T13:34:44.120871+00:00
+primary_failover,5,True,,0.35,0.35,27.88,31.82,32.85,False,1,2,True,1009,1025,True,0,0,47.69,200.28,False,True,postgres-ha-1,postgres-ha-0,2026-03-24T13:34:46.121362+00:00,2026-03-24T13:36:28.409545+00:00
+primary_failover,6,False,postcheck criteria not met,0.15,1.45,15.84,31.75,,False,1,2,True,1027,1043,True,1,1,,,False,False,postgres-ha-0,postgres-ha-1,2026-03-24T13:36:30.410017+00:00,2026-03-24T13:40:07.012314+00:00
+primary_failover,7,False,"precheck roles invalid: primary=2, standby=1",,,,,,False,,,False,,,,0,0,,,False,False,,,2026-03-24T13:42:12.786031+00:00,2026-03-24T13:44:14.360069+00:00
+primary_failover,8,True,,0.19,0.19,22.23,31.8,42.3,False,1,2,True,1099,1114,True,0,0,35.1,91.28,False,True,postgres-ha-1,postgres-ha-0,2026-03-24T13:46:10.427573+00:00,2026-03-24T13:47:50.131401+00:00
+primary_failover,9,False,postcheck criteria not met,0.19,1.6,21.92,,,True,2,1,True,1116,1119,True,1,1,,,False,False,postgres-ha-0,postgres-ha-1,2026-03-24T13:47:52.131944+00:00,2026-03-24T13:51:36.559247+00:00
+primary_failover,10,False,postcheck criteria not met,0.33,0.33,22.05,,156.75,True,2,1,True,1149,1160,True,2,2,55.8,106.76,True,True,postgres-ha-1,postgres-ha-0,2026-03-24T13:53:32.507558+00:00,2026-03-24T13:56:18.574315+00:00
+standby_recovery,1,False,"precheck roles invalid: primary=2, standby=1",,,,,,False,,,False,,,,0,0,,,False,False,,,2026-03-24T13:58:15.308896+00:00,2026-03-24T14:00:18.838820+00:00
+standby_recovery,2,False,"precheck roles invalid: primary=2, standby=1",,,,,,False,,,False,,,,0,0,,,False,False,,,2026-03-24T14:02:14.825206+00:00,2026-03-24T14:04:16.893231+00:00
+standby_recovery,3,False,postcheck criteria not met,,,,122.53,,False,1,2,True,1221,1231,True,1,1,135.71,545.15,False,True,postgres-ha-0,,2026-03-24T14:06:13.465069+00:00,2026-03-24T14:08:24.780002+00:00
+standby_recovery,4,False,"precheck roles invalid: primary=2, standby=1",,,,,,False,,,False,,,,0,0,,,False,False,,,2026-03-24T14:10:31.118098+00:00,2026-03-24T14:12:32.717296+00:00
+standby_recovery,5,False,postcheck criteria not met,,,,122.22,,False,1,2,True,1291,1301,True,1,1,39.59,79.65,False,True,postgres-ha-0,,2026-03-24T14:14:46.569687+00:00,2026-03-24T14:16:57.367636+00:00
+standby_recovery,6,False,"precheck roles invalid: primary=2, standby=1",,,,,,False,,,False,,,,0,0,,,False,False,,,2026-03-24T14:18:53.443034+00:00,2026-03-24T14:20:56.799545+00:00
+standby_recovery,7,False,"precheck roles invalid: primary=0, standby=0",,,,,,False,,,False,,,,0,0,,,False,False,,,2026-03-24T14:28:19.729019+00:00,2026-03-24T14:30:21.103300+00:00
+standby_recovery,8,False,"precheck roles invalid: primary=0, standby=0",,,,,,False,,,False,,,,0,0,,,False,False,,,2026-03-24T14:37:43.969261+00:00,2026-03-24T14:39:45.788557+00:00
+standby_recovery,9,False,"precheck roles invalid: primary=0, standby=0",,,,,,False,,,False,,,,0,0,,,False,False,,,2026-03-24T14:47:08.695676+00:00,2026-03-24T14:49:11.533548+00:00
+standby_recovery,10,False,"precheck roles invalid: primary=0, standby=0",,,,,,False,,,False,,,,0,0,,,False,False,,,2026-03-24T14:56:34.521712+00:00,2026-03-24T14:58:38.096085+00:00

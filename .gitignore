@@ -30,3 +30,6 @@ override.tf.json
 # OS/IDE
 .DS_Store
 Thumbs.db
+
+# Local tooling binaries
+tools/

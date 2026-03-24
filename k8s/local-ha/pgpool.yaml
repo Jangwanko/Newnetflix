@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-proxy
+  namespace: myflix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-proxy
+  template:
+    metadata:
+      labels:
+        app: postgres-proxy
+    spec:
+      containers:
+        - name: newnetflix-pgpool
+          image: bitnamilegacy/pgpool:4.6.3
+          ports:
+            - name: postgresql
+              containerPort: 5432
+          env:
+            - name: PGPOOL_BACKEND_NODES
+              value: "0:postgres-ha-0.postgres-ha-headless.myflix.svc.cluster.local:5432,1:postgres-ha-1.postgres-ha-headless.myflix.svc.cluster.local:5432,2:postgres-ha-2.postgres-ha-headless.myflix.svc.cluster.local:5432"
+            - name: PGPOOL_SR_CHECK_USER
+              value: repmgr
+            - name: PGPOOL_SR_CHECK_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-ha-secret
+                  key: REPMGR_PASSWORD
+            - name: PGPOOL_POSTGRES_USERNAME
+              value: backend_user
+            - name: PGPOOL_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-ha-secret
+                  key: POSTGRESQL_PASSWORD
+            - name: PGPOOL_ADMIN_USERNAME
+              value: admin
+            - name: PGPOOL_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-ha-secret
+                  key: PGPOOL_ADMIN_PASSWORD
+          readinessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5432
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: myflix
+spec:
+  selector:
+    app: postgres-proxy
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: 5432

@@ -10,6 +10,16 @@
   }
 }
 
+# Portfolio/local-safe guard:
+# Terraform code is preserved for reference, but plan/apply is blocked by default.
+# To intentionally run, set `enable_iac_apply = true` in terraform.tfvars.
+check "iac_safe_mode" {
+  assert {
+    condition     = var.enable_iac_apply
+    error_message = "IaC safe mode is enabled. Set enable_iac_apply=true only when you intentionally run Terraform."
+  }
+}
+
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
   version = "5.18.1"

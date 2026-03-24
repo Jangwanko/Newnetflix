@@ -93,3 +93,9 @@ variable "domain_name" {
   description = "Public domain for service (optional)."
   default     = ""
 }
+
+variable "enable_iac_apply" {
+  type        = bool
+  description = "Safety guard. Must be true to allow terraform plan/apply."
+  default     = false
+}

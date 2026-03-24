@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: myflix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+        - name: newnetflix
+          image: newnetflix:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: RUN_MIGRATIONS
+              value: "false"
+            - name: RUN_COLLECTSTATIC
+              value: "true"
+          envFrom:
+            - configMapRef:
+                name: myflix-config
+            - secretRef:
+                name: myflix-secret
+          volumeMounts:
+            - name: static
+              mountPath: /code/staticfiles
+            - name: media
+              mountPath: /code/media
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: localhost
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: localhost
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 8000
+              httpHeaders:
+                - name: Host
+                  value: localhost
+            initialDelaySeconds: 120
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+      volumes:
+        - name: static
+          persistentVolumeClaim:
+            claimName: static-data
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: myflix
+  labels:
+    app: web
+spec:
+  selector:
+    app: web
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

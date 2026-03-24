@@ -24,6 +24,14 @@ data:
           "targets": [{ "expr": "sum(rate(myflix_http_requests_total{status=~\"5..\"}[5m])) / clamp_min(sum(rate(myflix_http_requests_total[5m])), 1)", "legendFormat": "5xx Ratio" }],
           "title": "Error Ratio",
           "type": "timeseries"
+        },
+        {
+          "datasource": "Prometheus",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+          "id": 3,
+          "targets": [{ "expr": "max(pg_up{job=\"postgres-exporter\"})", "legendFormat": "pg_up" }],
+          "title": "Database Availability",
+          "type": "timeseries"
         }
       ],
       "schemaVersion": 39,

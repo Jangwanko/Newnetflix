@@ -55,6 +55,19 @@
       ],
       "title": "Upload Success Count",
       "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "max(pg_up{job=\"postgres-exporter\"})",
+          "legendFormat": "pg_up"
+        }
+      ],
+      "title": "Database Availability",
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 39,

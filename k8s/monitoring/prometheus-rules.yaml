@@ -52,3 +52,19 @@ data:
               severity: warning
             annotations:
               summary: "Movie upload errors are increasing"
+
+          - alert: MyflixDatabaseDown
+            expr: max_over_time(pg_up{job="postgres-exporter"}[30s]) < 1
+            for: 15s
+            labels:
+              severity: critical
+            annotations:
+              summary: "Database is unreachable from postgres-exporter"
+
+          - alert: MyflixPostgresExporterDown
+            expr: up{job="postgres-exporter"} == 0
+            for: 30s
+            labels:
+              severity: warning
+            annotations:
+              summary: "postgres-exporter target is down"

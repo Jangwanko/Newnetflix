@@ -1,24 +1,13 @@
-name: CI/CD
+name: CI (Local-Safe)
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      deploy:
-        description: "Set to true to deploy to AWS (portfolio safety default: false)"
-        required: false
-        default: "false"
+  pull_request:
 
 permissions:
-  id-token: write
   contents: read
-
-env:
-  AWS_REGION: ap-northeast-2
-  ECR_REPOSITORY: myflix-prod-app
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   test:
@@ -79,7 +68,7 @@ jobs:
 
   infra-validate:
     runs-on: ubuntu-latest
-    if: ${{ false }} # portfolio mode: skip terraform validation
+    if: ${{ false }} # local-safe mode: keep IaC files as reference only (disabled by default)
 
     steps:
       - name: Checkout
@@ -114,67 +103,13 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL,HIGH
 
-  build-and-push:
+  build-local-image:
     runs-on: ubuntu-latest
-    needs: [test, infra-validate, security-scan]
-
-    outputs:
-      image_uri: ${{ steps.meta.outputs.image_uri }}
+    needs: [test, security-scan]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Kustomize
-        uses: imranismail/setup-kustomize@v2
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and push backend image
-        id: meta
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          IMAGE_URI=$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker build -f docker/backend.Dockerfile -t $IMAGE_URI .
-          docker push $IMAGE_URI
-          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-and-push
-    # environment: production  # 예시: 운영 보호 환경 사용 시 활성화
-    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'true' }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Update kubeconfig
-        run: |
-          aws eks update-kubeconfig --region $AWS_REGION --name ${{ secrets.EKS_CLUSTER_NAME }}
-
-      - name: Set image and deploy
-        env:
-          IMAGE_URI: ${{ needs.build-and-push.outputs.image_uri }}
-        run: |
-          cd k8s/prod
-          kustomize edit set image myflix-app=$IMAGE_URI
-          kubectl apply -k .
-          kubectl rollout status deployment/web -n myflix --timeout=180s
-          kubectl rollout status deployment/worker -n myflix --timeout=180s
+      - name: Build backend image (no push)
+        run: docker build -f docker/backend.Dockerfile -t newnetflix:ci-${{ github.sha }} .

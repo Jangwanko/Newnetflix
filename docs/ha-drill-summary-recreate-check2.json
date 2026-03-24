@@ -1,0 +1,32 @@
+{
+  "standby_recovery": {
+    "runs": 1,
+    "success_runs": 1,
+    "success_rate": 1.0,
+    "rto_seconds": {
+      "max": null,
+      "avg": null,
+      "p95": null
+    },
+    "rejoin_seconds": {
+      "max": 0.84,
+      "avg": 0.84,
+      "p95": 0.84
+    },
+    "pgpool_recovery_seconds": {
+      "max": 0.27,
+      "avg": 0.27,
+      "p95": 0.27
+    },
+    "readyz_p95_ms": {
+      "max": 50.84,
+      "avg": 50.84,
+      "p95": 50.84
+    },
+    "readyz_5xx_total": 0,
+    "split_brain_count": 0,
+    "integrity_fail_count": 0,
+    "alert_fired_count": 0,
+    "alert_uncleared_count": 0
+  }
+}

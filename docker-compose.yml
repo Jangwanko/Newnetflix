@@ -1,5 +1,6 @@
 services:
   postgres:
+    container_name: newnetflix-db
     build:
       context: .
       dockerfile: docker/postgres.Dockerfile
@@ -13,6 +14,7 @@ services:
       - app-network
 
   redis:
+    container_name: newnetflix-redis
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
@@ -21,6 +23,7 @@ services:
       - app-network
 
   backend:
+    container_name: newnetflix
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
@@ -45,6 +48,7 @@ services:
       - app-network
 
   worker:
+    container_name: newnetflix-worker
     build:
       context: .
       dockerfile: docker/backend.Dockerfile
@@ -67,6 +71,7 @@ services:
       - app-network
 
   frontend:
+    container_name: newnetflix-nginx
     build:
       context: .
       dockerfile: docker/frontend.Dockerfile
@@ -80,6 +85,7 @@ services:
       - app-network
 
   prometheus:
+    container_name: newnetflix-prometheus
     image: prom/prometheus:v2.55.1
     profiles: ["observability"]
     command:
@@ -95,6 +101,7 @@ services:
       - app-network
 
   loki:
+    container_name: newnetflix-loki
     image: grafana/loki:3.1.1
     profiles: ["observability"]
     command: ["-config.file=/etc/loki/local-config.yaml"]
@@ -107,6 +114,7 @@ services:
       - app-network
 
   promtail:
+    container_name: newnetflix-promtail
     image: grafana/promtail:3.1.1
     profiles: ["observability"]
     command: ["-config.file=/etc/promtail/config.yml"]
@@ -117,6 +125,7 @@ services:
       - app-network
 
   grafana:
+    container_name: newnetflix-grafana
     image: grafana/grafana:11.1.4
     profiles: ["observability"]
     ports:

@@ -1,0 +1,178 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-ha-headless
+  namespace: myflix
+spec:
+  clusterIP: None
+  selector:
+    app: postgres-ha
+  ports:
+    - name: postgresql
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-ha
+  namespace: myflix
+spec:
+  serviceName: postgres-ha-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: postgres-ha
+  template:
+    metadata:
+      labels:
+        app: postgres-ha
+    spec:
+      containers:
+        - name: newnetflix-db
+          image: bitnamilegacy/postgresql-repmgr:17.6.0
+          command:
+            - /bin/bash
+            - -ec
+            - |
+              sleep "${STARTUP_GRACE_SECONDS:-20}"
+              . /opt/bitnami/scripts/postgresql-env.sh
+              psql_bin="/opt/bitnami/postgresql/bin/psql"
+              if [[ ! -x "$psql_bin" ]]; then
+                psql_bin="psql"
+              fi
+              ordinal="${POD_NAME##*-}"
+              export REPMGR_NODE_ID="$((1000 + ordinal))"
+              self_fqdn="${POD_NAME}.postgres-ha-headless.myflix.svc.cluster.local"
+              peer_primary=""
+              discovery_timeout="${FAILOVER_DISCOVERY_TIMEOUT_SECONDS:-60}"
+              discovery_interval="${FAILOVER_DISCOVERY_INTERVAL_SECONDS:-5}"
+              discovery_deadline="$(( $(date +%s) + discovery_timeout ))"
+              IFS=',' read -ra partner_nodes <<< "${REPMGR_PARTNER_NODES}"
+              while true; do
+                for node in "${partner_nodes[@]}"; do
+                  if [[ "$node" == "$self_fqdn" ]]; then
+                    continue
+                  fi
+                  role="$(PGPASSWORD="${POSTGRESQL_PASSWORD}" "$psql_bin" -h "$node" -p "${REPMGR_PRIMARY_PORT}" -U "${POSTGRESQL_USERNAME}" -d "${POSTGRESQL_DATABASE}" -tAc "select case when pg_is_in_recovery() then 'standby' else 'primary' end;" 2>/dev/null | tr -d '[:space:]' || true)"
+                  if [[ "$role" == "primary" ]]; then
+                    peer_primary="$node"
+                    break
+                  fi
+                done
+                if [[ -n "$peer_primary" ]] || [[ "$(date +%s)" -ge "$discovery_deadline" ]]; then
+                  break
+                fi
+                sleep "$discovery_interval"
+              done
+              if [[ -n "$peer_primary" ]] && [[ "$peer_primary" != "$self_fqdn" ]]; then
+                echo "Detected existing primary at ${peer_primary}. Forcing standby rejoin."
+                rm -f "$REPMGR_PRIMARY_ROLE_LOCK_FILE_NAME"
+                export REPMGR_SWITCH_ROLE="yes"
+                export REPMGR_PRIMARY_HOST="$peer_primary"
+              fi
+              exec /opt/bitnami/scripts/postgresql-repmgr/entrypoint.sh /opt/bitnami/scripts/postgresql-repmgr/run.sh
+          ports:
+            - name: postgresql
+              containerPort: 5432
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POSTGRESQL_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-ha-secret
+                  key: POSTGRESQL_POSTGRES_PASSWORD
+            - name: POSTGRESQL_USERNAME
+              value: backend_user
+            - name: POSTGRESQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-ha-secret
+                  key: POSTGRESQL_PASSWORD
+            - name: POSTGRESQL_DATABASE
+              value: Django_DB
+            - name: REPMGR_USERNAME
+              value: repmgr
+            - name: REPMGR_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-ha-secret
+                  key: REPMGR_PASSWORD
+            - name: REPMGR_NODE_TYPE
+              value: data
+            - name: STARTUP_GRACE_SECONDS
+              value: "20"
+            - name: FAILOVER_DISCOVERY_TIMEOUT_SECONDS
+              value: "60"
+            - name: FAILOVER_DISCOVERY_INTERVAL_SECONDS
+              value: "5"
+            - name: REPMGR_PRIMARY_HOST
+              value: postgres-ha-0.postgres-ha-headless.myflix.svc.cluster.local
+            - name: REPMGR_PRIMARY_PORT
+              value: "5432"
+            - name: REPMGR_PARTNER_NODES
+              value: "postgres-ha-0.postgres-ha-headless.myflix.svc.cluster.local,postgres-ha-1.postgres-ha-headless.myflix.svc.cluster.local,postgres-ha-2.postgres-ha-headless.myflix.svc.cluster.local"
+            - name: REPMGR_NODE_NAME
+              value: $(POD_NAME)
+            - name: REPMGR_NODE_NETWORK_NAME
+              value: $(POD_NAME).postgres-ha-headless.myflix.svc.cluster.local
+            - name: REPMGR_FENCE_OLD_PRIMARY
+              value: "true"
+            - name: REPMGR_PRIMARY_VISIBILITY_CONSENSUS
+              value: "true"
+            - name: REPMGR_CHILD_NODES_CHECK_INTERVAL
+              value: "5"
+            - name: REPMGR_CHILD_NODES_CONNECTED_MIN_COUNT
+              value: "1"
+            - name: REPMGR_CHILD_NODES_DISCONNECT_TIMEOUT
+              value: "30"
+            - name: POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS
+              value: "1"
+            - name: POSTGRESQL_SYNCHRONOUS_COMMIT_MODE
+              value: "remote_apply"
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U backend_user -d Django_DB
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          startupProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U backend_user -d Django_DB
+            periodSeconds: 5
+            failureThreshold: 60
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U backend_user -d Django_DB
+            initialDelaySeconds: 180
+            periodSeconds: 20
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/postgresql
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 8Gi

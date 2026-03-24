@@ -1,0 +1,2 @@
+scenario,run,success,fail_reason,detected_seconds,promoted_seconds,rto_seconds,rejoin_seconds,pgpool_recovery_seconds,split_brain,primary_count_end,standby_count_end,integrity_ok,txid_before,txid_after,marker_exists_after,readyz_5xx_count,readyz_non200_count,readyz_avg_ms,readyz_p95_ms,alert_fired,alert_cleared_after,deleted_pod,promoted_pod,started_at,finished_at
+standby_recovery,1,True,,,,,0.75,0.26,False,1,2,True,2131,2141,True,1,1,383.49,1740.97,False,True,postgres-ha-0,,2026-03-24T20:07:48.514121+00:00,2026-03-24T20:09:57.323191+00:00

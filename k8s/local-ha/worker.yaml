@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: myflix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+        - name: newnetflix-worker
+          image: newnetflix:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: APP_ROLE
+              value: worker
+            - name: WAIT_FOR_MIGRATIONS
+              value: "true"
+            - name: RUN_MIGRATIONS
+              value: "false"
+            - name: RUN_COLLECTSTATIC
+              value: "false"
+          envFrom:
+            - configMapRef:
+                name: myflix-config
+            - secretRef:
+                name: myflix-secret
+          volumeMounts:
+            - name: media
+              mountPath: /code/media
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: media-data

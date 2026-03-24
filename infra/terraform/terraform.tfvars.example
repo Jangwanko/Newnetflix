@@ -2,6 +2,11 @@
 project_name       = "myflix"
 environment        = "prod"
 
+# Safety guard:
+# Keep false in repository state.
+# Set true only when intentionally running terraform plan/apply.
+enable_iac_apply   = false
+
 node_instance_types = ["t3.large"]
 node_desired_size   = 2
 node_min_size       = 2

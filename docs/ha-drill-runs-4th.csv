@@ -1,0 +1,21 @@
+scenario,run,success,fail_reason,detected_seconds,promoted_seconds,rto_seconds,rejoin_seconds,pgpool_recovery_seconds,split_brain,primary_count_end,standby_count_end,integrity_ok,txid_before,txid_after,marker_exists_after,readyz_5xx_count,readyz_non200_count,readyz_avg_ms,readyz_p95_ms,alert_fired,alert_cleared_after,deleted_pod,promoted_pod,started_at,finished_at
+primary_failover,1,False,postcheck criteria not met,0.14,1.43,26.28,6.69,,False,1,2,True,2167,2183,True,1,1,,,False,False,postgres-ha-1,postgres-ha-0,2026-03-24T20:15:39.962220+00:00,2026-03-24T20:19:31.996582+00:00
+primary_failover,2,True,,0.15,0.15,33.12,12.42,52.91,False,1,2,True,2218,2234,True,0,0,24.74,47.9,False,False,postgres-ha-1,postgres-ha-0,2026-03-24T20:21:18.135652+00:00,2026-03-24T20:24:18.732264+00:00
+primary_failover,3,False,postcheck criteria not met,0.14,0.14,,53.17,,True,1,2,True,2236,2251,True,1,1,,,False,False,postgres-ha-0,postgres-ha-1,2026-03-24T20:24:20.732866+00:00,2026-03-24T20:27:52.186796+00:00
+primary_failover,4,True,,0.15,1.4,11.05,18.32,33.56,False,1,2,True,2278,2294,True,0,0,31.64,46.41,False,True,postgres-ha-1,postgres-ha-0,2026-03-24T20:30:08.413654+00:00,2026-03-24T20:31:47.720275+00:00
+primary_failover,5,False,postcheck criteria not met,0.13,1.4,25.76,58.98,,False,1,2,True,2296,2312,True,1,1,,,False,False,postgres-ha-0,postgres-ha-1,2026-03-24T20:31:49.720709+00:00,2026-03-24T20:35:26.667729+00:00
+primary_failover,6,True,,0.15,0.15,28.36,12.52,50.49,False,1,2,True,2337,2353,True,0,0,,,True,False,postgres-ha-1,postgres-ha-0,2026-03-24T20:37:17.998118+00:00,2026-03-24T20:39:23.740350+00:00
+primary_failover,7,True,,0.15,1.47,26.36,36.09,64.36,False,1,2,True,2355,2371,True,0,0,20.22,36.81,True,True,postgres-ha-0,postgres-ha-1,2026-03-24T20:39:25.740519+00:00,2026-03-24T20:41:03.985965+00:00
+primary_failover,8,True,,0.12,0.12,16.77,12.51,34.05,False,1,2,True,2373,2389,True,1,1,,,False,True,postgres-ha-1,postgres-ha-0,2026-03-24T20:41:05.986506+00:00,2026-03-24T20:43:21.287565+00:00
+primary_failover,9,False,postcheck criteria not met,0.15,0.15,26.9,53.76,,False,1,2,True,2391,2406,True,0,0,,,True,False,postgres-ha-0,postgres-ha-1,2026-03-24T20:43:23.288183+00:00,2026-03-24T20:46:42.185356+00:00
+primary_failover,10,False,postcheck criteria not met,0.13,0.13,,65.12,,True,1,2,True,2445,2461,True,1,1,,,False,False,postgres-ha-1,postgres-ha-0,2026-03-24T20:48:33.694452+00:00,2026-03-24T20:52:40.851675+00:00
+standby_recovery,1,True,,,,,0.83,0.26,False,1,2,True,2496,2506,True,0,0,27.39,44.15,False,True,postgres-ha-0,,2026-03-24T20:54:28.359048+00:00,2026-03-24T20:57:05.178914+00:00
+standby_recovery,2,True,,,,,0.89,0.29,False,1,2,True,2508,2518,True,0,0,24.47,41.64,False,True,postgres-ha-0,,2026-03-24T20:57:07.179427+00:00,2026-03-24T20:59:16.942090+00:00
+standby_recovery,3,True,,,,,0.84,0.3,False,1,2,True,2520,2530,True,0,0,33.17,46.57,False,True,postgres-ha-0,,2026-03-24T20:59:18.942623+00:00,2026-03-24T21:01:27.859278+00:00
+standby_recovery,4,True,,,,,0.85,0.28,False,1,2,True,2532,2542,True,0,0,36.97,80.31,False,True,postgres-ha-0,,2026-03-24T21:01:29.859408+00:00,2026-03-24T21:03:39.245113+00:00
+standby_recovery,5,True,,,,,0.85,0.31,False,1,2,True,2544,2554,True,0,0,28.44,47.63,False,True,postgres-ha-0,,2026-03-24T21:03:41.245616+00:00,2026-03-24T21:05:50.135451+00:00
+standby_recovery,6,True,,,,,0.85,0.29,False,1,2,True,2556,2567,True,0,0,19.57,40.71,False,True,postgres-ha-0,,2026-03-24T21:05:52.135671+00:00,2026-03-24T21:08:01.888934+00:00
+standby_recovery,7,True,,,,,0.85,0.27,False,1,2,True,2569,2579,True,0,0,23.67,40.2,False,True,postgres-ha-0,,2026-03-24T21:08:03.889206+00:00,2026-03-24T21:10:12.629524+00:00
+standby_recovery,8,True,,,,,0.81,0.26,False,1,2,True,2581,2591,True,0,0,18.65,40.48,False,True,postgres-ha-0,,2026-03-24T21:10:14.629951+00:00,2026-03-24T21:12:24.172614+00:00
+standby_recovery,9,True,,,,,0.91,0.3,False,1,2,True,2593,2603,True,0,0,28.44,43.38,False,True,postgres-ha-0,,2026-03-24T21:12:26.172831+00:00,2026-03-24T21:14:35.105140+00:00
+standby_recovery,10,True,,,,,0.83,0.28,False,1,2,True,2605,2615,True,0,0,31.96,49.49,False,True,postgres-ha-0,,2026-03-24T21:14:37.105416+00:00,2026-03-24T21:16:46.723855+00:00

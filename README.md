@@ -1,266 +1,102 @@
-﻿# Newnetflix
+# Newnetflix
 
-Newnetflix는 영상 업로드/시청/댓글/좋아요를 제공하는 Django 서비스입니다.
-이 저장소는 로컬 개발용 구성뿐 아니라, AWS 운영 배포를 위한 IaC(Terraform)와 Kubernetes 매니페스트를 포함합니다.
+`kind` 기반 로컬 Kubernetes 환경에서 Django 서비스를 운영하고, PostgreSQL HA(`repmgr + pgpool`) failover를 반복 검증하는 프로젝트입니다.
 
-## 운영 목표 아키텍처
-- EKS: 애플리케이션(web/worker) 실행
-- RDS PostgreSQL: 운영 DB
-- S3: 영상 파일 저장소
-- ECR: 컨테이너 이미지 저장소
-- Secrets Manager + External Secrets: 시크릿 주입
-- Prometheus + Grafana: RED 메트릭/대시보드
-- Loki + Promtail: 로그 수집
-- NGINX Ingress + TLS: HTTPS 제공
+## 현재 구성
+- App: `web`, `worker`, `nginx`
+- DB HA: `postgres-ha-0`, `postgres-ha-1`, `postgres-ha-2` (P1 + S2)
+- DB Proxy: `postgres-proxy` (`Service: postgres`)
+- Monitoring: Prometheus + Grafana + postgres-exporter
+- Fencing: `postgres-fencer` (split-brain 자동 감지/격리)
 
-아키텍처 다이어그램: `docs/architecture.md`
+## 실행 방법
 
----
-
-## 빠른 시작 (로컬)
-
+### 1) Docker Compose
 ```bash
 cp .env.example .env
 docker compose up --build -d
 ```
 
-접속: http://localhost:18080
-
-기본 검증:
+### 2) Local Kubernetes (kind)
 ```bash
-docker compose exec -T web python manage.py check
-docker compose exec -T web python manage.py test movies posts users
-```
-
----
-
-## AWS 운영 배포 (Terraform + EKS)
-포트폴리오 모드에서는 Terraform은 실행하지 않으며, 구성 파일만 보존합니다.
-
-### 1) 사전 준비
-- AWS 계정, IAM 권한(Administrator 수준 또는 동등 권한)
-- `terraform >= 1.7`
-- `aws cli`, `kubectl`, `helm`
-
-### 2) Terraform 상태 저장소 준비(최초 1회)
-- S3 버킷 (terraform state)
-- DynamoDB 테이블 (state lock)
-
-`infra/terraform/backend.hcl.example` 값을 실제로 채워 `backend.hcl` 생성
-
-### 3) 인프라 생성
-```bash
-cd infra/terraform
-cp terraform.tfvars.example terraform.tfvars
-# terraform.tfvars 값 수정
-terraform init -backend-config=backend.hcl
-terraform plan
-terraform apply
-```
-
-생성 리소스:
-- VPC
-- EKS
-- RDS PostgreSQL (Multi-AZ 옵션)
-- ECR Repository (immutable tag)
-- S3 media bucket (versioning + SSE)
-- Secrets Manager(앱 시크릿)
-
-### 4) kubeconfig 연결
-```bash
-aws eks update-kubeconfig --region <region> --name <cluster_name>
-```
-
-`cluster_name`은 `terraform output cluster_name`으로 확인
-
-### 5) 필수 애드온 설치
-- cert-manager (TLS)
-- External Secrets Operator
-
-```bash
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
-helm install cert-manager jetstack/cert-manager -n cert-manager --create-namespace --set crds.enabled=true
-
-helm repo add external-secrets https://charts.external-secrets.io
-helm repo update
-helm install external-secrets external-secrets/external-secrets -n external-secrets --create-namespace
-```
-
-### 6) 앱 이미지 빌드/푸시
-```bash
-aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <account>.dkr.ecr.<region>.amazonaws.com
-docker build -t <account>.dkr.ecr.<region>.amazonaws.com/myflix-prod-app:<git-sha> .
-docker push <account>.dkr.ecr.<region>.amazonaws.com/myflix-prod-app:<git-sha>
-```
-
-### 7) 프로덕션 매니페스트 배포
-`k8s/prod/configmap.yaml`의 아래 값을 먼저 수정
-- `DB_HOST` (terraform output의 RDS endpoint)
-- `AWS_STORAGE_BUCKET_NAME`
-- 도메인 값
-- ECR 이미지 경로
-
-`k8s/prod/cluster-issuer.yaml`의 이메일 값 수정
-
-배포:
-```bash
-kubectl apply -k k8s/prod
-```
-
-DB 마이그레이션 (1회):
-```bash
-kubectl apply -f k8s/prod/migrate-job.yaml
-kubectl wait --for=condition=complete job/db-migrate -n myflix --timeout=300s
-kubectl delete job db-migrate -n myflix
-```
-
-상태 확인:
-```bash
-kubectl get pods -n myflix
-kubectl get svc -n myflix
-kubectl get ingress -n myflix
-```
-
----
-
-## Observability
-
-앱 엔드포인트:
-- `/metrics`
-- `/livez`
-- `/readyz`
-
-RED 지표:
-- `myflix_http_requests_total`
-- `myflix_http_request_duration_seconds`
-- `myflix_movie_upload_requests_total`
-- `myflix_movie_upload_duration_seconds`
-
-Prometheus 템플릿:
-- `k8s/monitoring/prometheus.yaml`
-- `k8s/monitoring/prometheus-rules.yaml`
-ServiceMonitor 사용을 위해 Prometheus Operator가 필요합니다.
-
-로그 스택 (Loki + Promtail + Grafana):
-- `k8s/observability/`
-
-배포:
-```bash
+kind create cluster --name newnetflix-local
+docker build --platform linux/amd64 --provenance=false -f docker/backend.Dockerfile -t newnetflix:local .
+kind load docker-image newnetflix:local --name newnetflix-local
+kubectl apply -k k8s/local-ha
+kubectl apply -k k8s/monitoring
 kubectl apply -k k8s/observability
 ```
 
-권장 흐름:
-1. 앱이 `/metrics` 노출
-2. Prometheus가 scrape
-3. Alert rule로 실시간 감지
-4. 필요 시 Remote Write로 분석용 저장소에 전송
-
----
-
-## 장애 리허설 결과 (로컬)
-
-실행 일시: 2026-03-13 (KST)
-
-### 시나리오 1: DB 장애
-재현:
+## HA Drill 자동 검증
 ```bash
-docker compose stop postgres
+python scripts/ha_drill.py --iterations 10
 ```
-관측:
-- `/readyz` -> 503 (DB dependency error)
-- `/` -> 200 (웹은 응답하나 DB 의존 기능은 영향 가능)
-복구:
+
+빠른 로컬 확인:
 ```bash
-docker compose start postgres
-```
-복구 후 `/readyz` 200 확인
-
-### 시나리오 2: Worker 중단
-재현:
-```bash
-docker compose stop worker
-```
-관측:
-- `/readyz` -> 200
-- 업로드/비동기 처리 지연 가능
-복구:
-```bash
-docker compose start worker
+python scripts/ha_drill.py --fast --iterations 3 --scenarios standby_recovery --poll-interval-seconds 5
 ```
 
-### 시나리오 3: Web 중단
-재현:
-```bash
-docker compose stop backend
-```
-관측:
-- `/` 요청 타임아웃 발생 (nginx access log 기준 499)
-복구:
-```bash
-docker compose start backend
-```
-복구 후 `/` 200 확인
+## 측정 산출물
+- 1차: `docs/ha-drill-runs-1st.csv`, `docs/ha-drill-summary-1st.json`
+- 2차: `docs/ha-drill-runs-2nd.csv`, `docs/ha-drill-summary-2nd.json`
+- 3차: `docs/ha-drill-runs-3rd.csv`, `docs/ha-drill-summary-3rd.json`
+- 4차: `docs/ha-drill-runs-4th.csv`, `docs/ha-drill-summary-4th.json`
 
----
+## 성공 기준 (Acceptance)
+- 시나리오별 10회 실행
+- `RTO`, `재조인`, `pgpool 복구`의 `max/avg/p95` 기록
+- 매 회차 `primary 개수 == 1` 강제 체크(split-brain 즉시 실패)
+- failover 전후 데이터 무결성(marker row) 검증
+- `/readyz` 5xx/지연 기록
+- DB 다운 알람 발생/해제 여부 기록
 
-## CI/CD
+## 측정 결과
 
-`main` 브랜치 push 시 GitHub Actions가 아래를 수행합니다.
-- 테스트/체크
-- Terraform fmt/validate
-- Trivy filesystem scan
-- ECR 이미지 빌드/푸시
-- (포트폴리오 안전모드) 배포는 수동 승인 시에만 실행
+### 1차 측정
+- primary_failover: `60%` (6/10), split-brain `2회`
+- standby_recovery: `0%` (0/10)
 
-필수 GitHub Secret:
-- `AWS_ROLE_TO_ASSUME` (OIDC AssumeRole ARN)
-- `EKS_CLUSTER_NAME`
+### 2차 측정 (2026-03-25)
+- primary_failover: `40%` (4/10), split-brain `3회`
+- standby_recovery: `0%` (0/10)
 
-워크플로우 파일:
-- `.github/workflows/docker.yml`
+### 3차 측정 (2026-03-25, 감지/펜싱 적용 후)
+- primary_failover: `90%` (9/10), split-brain `0회`
+- standby_recovery: `0%` (0/10)
 
-### 포트폴리오 안전모드 (자동 배포 차단)
-실제 AWS에 무의식적으로 배포되는 것을 방지하기 위해 `deploy` 잡을 **수동 실행**으로 제한했습니다.
-또한 `environment: production`은 예시로만 남기기 위해 워크플로우에서 주석 처리했습니다.
+### 4차 측정 (2026-03-25, 재생성 기반 판정 적용 후)
 
-배포 조건:
-- GitHub Actions에서 **수동 실행**(`workflow_dispatch`)
-- 입력값 `deploy=true` 일 때만 배포 실행
+#### primary_failover (10회)
+- 성공률: `50%` (5/10)
+- RTO: `max 33.12s / avg 23.13s / p95 33.12s`
+- old primary 재조인: `max 36.09s / avg 18.37s / p95 36.09s`
+- pgpool 복구: `max 64.36s / avg 47.07s / p95 64.36s`
+- split-brain: `2회`
+- 무결성 실패: `0회`
+- `/readyz` 5xx 합계: `5`
 
-### 실제 배포로 전환하는 방법
-아래 중 하나를 선택할 수 있습니다.
-1. 현재 구조 유지: Actions에서 수동 실행 시 `deploy=true`로 배포
-2. 자동 배포 복원: `.github/workflows/docker.yml`의 `deploy` 잡 조건을 제거
-   - 제거 대상: `if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'true' }}`
+#### standby_recovery (10회)
+- 성공률: `100%` (10/10)
+- 재조인: `max 0.91s / avg 0.85s / p95 0.91s`
+- pgpool 복구: `max 0.31s / avg 0.28s / p95 0.31s`
+- split-brain: `0회`
+- 무결성 실패: `0회`
+- `/readyz` 5xx 합계: `0`
 
----
+## 4차 실험 분석및 가설
 
-## 운영 문서
+### 분석
+- standby_recovery는 “DB 개수(3) + 재생성 확인 + 역할(P1+S2)” 기준으로 전환하면서 안정적으로 통과
+- primary_failover는 여전히 `postcheck criteria not met`가 반복되어 성공률이 50%에 머무름
+- split-brain은 줄었지만 완전히 제거되지 않음(`2회`)
 
-- 아키텍처: `docs/architecture.md`
-- SLO: `docs/slo.md`
-- 장애 시나리오: `docs/failure-scenarios.md`
-- 장애 리허설 로그: `docs/drill-log.md`
-- 인시던트 리포트 템플릿: `docs/incident-report.md`
-- Runbook: `docs/runbook.md`
-- DR: `docs/dr.md`
-- Capacity: `docs/capacity.md`
-- Cost: `docs/cost.md`
-- Security: `docs/security.md`
-- Release 전략: `docs/release-strategy.md`
-- 성능 테스트: `docs/perf-test.md`
-- 운영 증거 가이드: `docs/ops-evidence.md`
+### 가설
+- 가설 1: primary 시나리오의 postcheck가 실제 장애 특성 대비 과도하게 엄격해 실패를 유발한다
+- 가설 2: pgpool 복구 지연과 alert 해제 지연이 primary_failover 성공률 하락의 핵심 요인이다
+- 가설 3: fencer는 split-brain 억제에는 효과가 있으나, primary 승격 직후 수렴 안정화에는 추가 튜닝이 필요하다
 
----
-
-## 주요 디렉터리
-
-```text
-infra/terraform/           AWS IaC (VPC/EKS/RDS/ECR/S3/Secrets)
-k8s/prod/                  EKS 운영 매니페스트
-k8s/monitoring/            Prometheus 설정
-k8s/observability/         Grafana/Loki/Promtail
-movies/                    영상 도메인 + worker 처리
-myflix/                    Django 설정/metrics/middleware
-```
+### 다음 개선
+- primary_failover 전용 postcheck 조건 분리(핵심 SLO와 부가 지표 분리)
+- pgpool 상태 동기화/복구 시간 단축
+- fencer hold-down 및 leader 고정 전략 보강

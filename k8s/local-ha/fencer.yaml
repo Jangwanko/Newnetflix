@@ -1,0 +1,212 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-fencer
+  namespace: myflix
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: postgres-fencer
+  namespace: myflix
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: postgres-fencer
+  namespace: myflix
+subjects:
+  - kind: ServiceAccount
+    name: postgres-fencer
+    namespace: myflix
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: postgres-fencer
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-fencer
+  namespace: myflix
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-fencer
+  template:
+    metadata:
+      labels:
+        app: postgres-fencer
+    spec:
+      serviceAccountName: postgres-fencer
+      containers:
+        - name: postgres-fencer
+          image: newnetflix:local
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              python - <<'PY'
+              import json
+              import os
+              import ssl
+              import time
+              import urllib.parse
+              import urllib.request
+
+              import psycopg2
+
+              ns = os.getenv("NAMESPACE", "myflix")
+              db_user = os.getenv("DB_USER", "backend_user")
+              db_pass = os.getenv("DB_PASSWORD", "")
+              db_name = os.getenv("DB_NAME", "Django_DB")
+              check_interval = int(os.getenv("CHECK_INTERVAL_SECONDS", "5"))
+              connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT_SECONDS", "3"))
+              fence_cooldown = int(os.getenv("FENCE_COOLDOWN_SECONDS", "20"))
+
+              token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+              ca_path = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+              with open(token_path, "r", encoding="utf-8") as f:
+                token = f.read().strip()
+
+              k8s_host = os.environ["KUBERNETES_SERVICE_HOST"]
+              k8s_port = os.environ.get("KUBERNETES_SERVICE_PORT_HTTPS", "443")
+              base = f"https://{k8s_host}:{k8s_port}"
+
+              ssl_ctx = ssl.create_default_context(cafile=ca_path)
+
+              def k8s_request(method: str, path: str):
+                req = urllib.request.Request(
+                  base + path,
+                  method=method,
+                  headers={
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                  },
+                )
+                with urllib.request.urlopen(req, context=ssl_ctx, timeout=5) as resp:
+                  body = resp.read().decode("utf-8")
+                  return json.loads(body) if body else {}
+
+              def list_db_pods():
+                qs = urllib.parse.urlencode({"labelSelector": "app=postgres-ha"})
+                payload = k8s_request("GET", f"/api/v1/namespaces/{ns}/pods?{qs}")
+                return payload.get("items", [])
+
+              def pod_role(pod_name: str):
+                host = f"{pod_name}.postgres-ha-headless.{ns}.svc.cluster.local"
+                conn = None
+                try:
+                  conn = psycopg2.connect(
+                    host=host,
+                    user=db_user,
+                    password=db_pass,
+                    dbname=db_name,
+                    connect_timeout=connect_timeout,
+                  )
+                  with conn:
+                    with conn.cursor() as cur:
+                      cur.execute("select case when pg_is_in_recovery() then 'standby' else 'primary' end;")
+                      row = cur.fetchone()
+                      return row[0] if row else None
+                except Exception:
+                  return None
+                finally:
+                  try:
+                    conn.close()
+                  except Exception:
+                    pass
+
+              def fence_pod(pod_name: str):
+                try:
+                  k8s_request("DELETE", f"/api/v1/namespaces/{ns}/pods/{pod_name}")
+                  print(f"fenced pod={pod_name}", flush=True)
+                except Exception as e:
+                  print(f"failed fencing pod={pod_name} err={e}", flush=True)
+
+              leader_hint = None
+              last_fence_at = 0.0
+
+              while True:
+                try:
+                  pods = list_db_pods()
+                  running = [p for p in pods if p.get("status", {}).get("phase") == "Running"]
+                  primaries = []
+                  for pod in running:
+                    name = pod["metadata"]["name"]
+                    role = pod_role(name)
+                    if role == "primary":
+                      primaries.append(
+                        {
+                          "name": name,
+                          "start_time": pod.get("status", {}).get("startTime", ""),
+                        }
+                      )
+
+                  if len(primaries) > 1:
+                    now = time.time()
+                    primary_names = [p["name"] for p in primaries]
+                    if leader_hint in primary_names:
+                      keeper = leader_hint
+                    elif "postgres-ha-0" in primary_names:
+                      keeper = "postgres-ha-0"
+                    else:
+                      keeper = sorted(primary_names)[0]
+
+                    if now - last_fence_at < fence_cooldown:
+                      print(
+                        f"split-brain detected but cooldown active primaries={primary_names} keep={keeper}",
+                        flush=True,
+                      )
+                      time.sleep(check_interval)
+                      continue
+
+                    losers = [p["name"] for p in primaries[1:]]
+                    losers = [p for p in primary_names if p != keeper]
+                    print(
+                      f"split-brain detected primaries={primary_names} keep={keeper} fence={losers}",
+                      flush=True,
+                    )
+                    for loser in losers:
+                      fence_pod(loser)
+                    leader_hint = keeper
+                    last_fence_at = now
+                  elif len(primaries) == 1:
+                    leader_hint = primaries[0]["name"]
+                except Exception as e:
+                  print(f"fencer loop error: {e}", flush=True)
+
+                time.sleep(check_interval)
+              PY
+          env:
+            - name: NAMESPACE
+              value: myflix
+            - name: DB_USER
+              value: backend_user
+            - name: DB_NAME
+              value: Django_DB
+            - name: CHECK_INTERVAL_SECONDS
+              value: "5"
+            - name: DB_CONNECT_TIMEOUT_SECONDS
+              value: "3"
+            - name: FENCE_COOLDOWN_SECONDS
+              value: "20"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-ha-secret
+                  key: POSTGRESQL_PASSWORD
+          resources:
+            requests:
+              cpu: "20m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
