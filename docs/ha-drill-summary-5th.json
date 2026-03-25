@@ -1,0 +1,62 @@
+{
+  "primary_failover": {
+    "runs": 5,
+    "success_runs": 1,
+    "success_rate": 0.2,
+    "rto_seconds": {
+      "max": 15.9,
+      "avg": 15.9,
+      "p95": 15.9
+    },
+    "rejoin_seconds": {
+      "max": 13.1,
+      "avg": 13.1,
+      "p95": 13.1
+    },
+    "pgpool_recovery_seconds": {
+      "max": 34.12,
+      "avg": 34.12,
+      "p95": 34.12
+    },
+    "readyz_p95_ms": {
+      "max": 36.9,
+      "avg": 36.9,
+      "p95": 36.9
+    },
+    "readyz_5xx_total": 2,
+    "split_brain_count": 1,
+    "integrity_fail_count": 0,
+    "alert_fired_count": 2,
+    "alert_uncleared_count": 4
+  },
+  "standby_recovery": {
+    "runs": 5,
+    "success_runs": 4,
+    "success_rate": 0.8,
+    "rto_seconds": {
+      "max": null,
+      "avg": null,
+      "p95": null
+    },
+    "rejoin_seconds": {
+      "max": 1.08,
+      "avg": 1.06,
+      "p95": 1.08
+    },
+    "pgpool_recovery_seconds": {
+      "max": 0.35,
+      "avg": 0.34,
+      "p95": 0.35
+    },
+    "readyz_p95_ms": {
+      "max": 1035.2,
+      "avg": 1034.87,
+      "p95": 1035.2
+    },
+    "readyz_5xx_total": 15,
+    "split_brain_count": 0,
+    "integrity_fail_count": 0,
+    "alert_fired_count": 3,
+    "alert_uncleared_count": 3
+  }
+}

@@ -1,0 +1,11 @@
+scenario,run,success,fail_reason,detected_seconds,promoted_seconds,rto_seconds,rejoin_seconds,pgpool_recovery_seconds,split_brain,primary_count_end,standby_count_end,integrity_ok,txid_before,txid_after,marker_exists_after,readyz_5xx_count,readyz_non200_count,readyz_avg_ms,readyz_p95_ms,alert_fired,alert_cleared_after,deleted_pod,promoted_pod,started_at,finished_at
+primary_failover,1,False,postcheck criteria not met,0.14,0.14,33.22,13.17,,False,1,2,True,2632,2648,True,1,1,,,False,False,postgres-ha-1,postgres-ha-0,2026-03-25T09:35:20.356109+00:00,2026-03-25T09:38:33.472258+00:00
+primary_failover,2,False,postcheck criteria not met,0.13,0.13,31.72,7.13,,False,1,2,True,2680,2695,True,0,0,,,True,False,postgres-ha-1,postgres-ha-0,2026-03-25T09:40:19.165187+00:00,2026-03-25T09:44:31.919511+00:00
+primary_failover,3,False,postcheck criteria not met,0.12,0.12,32.76,13.15,,False,1,2,True,2728,2744,True,1,1,,,False,False,postgres-ha-1,postgres-ha-0,2026-03-25T09:46:12.909051+00:00,2026-03-25T09:49:50.603738+00:00
+primary_failover,4,False,postcheck criteria not met,0.12,0.12,,43.42,71.64,True,1,2,True,2778,2794,True,0,0,,,True,False,postgres-ha-1,postgres-ha-0,2026-03-25T09:51:36.582597+00:00,2026-03-25T09:53:26.358028+00:00
+primary_failover,5,True,,0.12,1.37,15.9,13.1,34.12,False,1,2,True,2827,2843,True,0,0,37.48,36.9,False,True,postgres-ha-1,postgres-ha-0,2026-03-25T09:55:12.082268+00:00,2026-03-25T09:58:41.066861+00:00
+standby_recovery,1,True,,,,,1.05,0.34,False,1,2,True,2845,2855,True,0,0,80.52,1035.2,False,True,postgres-ha-1,,2026-03-25T09:58:43.067104+00:00,2026-03-25T10:01:31.413307+00:00
+standby_recovery,2,True,,,,,1.06,0.34,False,1,2,True,2857,2867,True,0,0,78.06,1034.81,True,False,postgres-ha-1,,2026-03-25T10:01:33.413677+00:00,2026-03-25T10:04:51.943301+00:00
+standby_recovery,3,True,,,,,1.04,0.34,False,1,2,True,2869,2879,True,14,14,387.92,1035.1,False,True,postgres-ha-1,,2026-03-25T10:04:53.943752+00:00,2026-03-25T10:07:05.047270+00:00
+standby_recovery,4,True,,,,,1.08,0.35,False,1,2,True,2881,2891,True,0,0,80.39,1034.35,True,False,postgres-ha-1,,2026-03-25T10:07:07.047617+00:00,2026-03-25T10:09:51.480367+00:00
+standby_recovery,5,False,postcheck criteria not met,,,,1.02,,False,1,2,True,2893,2903,True,1,1,,,True,False,postgres-ha-1,,2026-03-25T10:09:53.480767+00:00,2026-03-25T10:14:10.527399+00:00

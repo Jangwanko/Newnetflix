@@ -1,0 +1,112 @@
+{
+  "primary_failover": {
+    "runs": 1,
+    "success_runs": 1,
+    "success_rate": 1.0,
+    "rto_seconds": {
+      "max": 23.23,
+      "avg": 23.23,
+      "p95": 23.23
+    },
+    "rejoin_seconds": {
+      "max": 35.27,
+      "avg": 35.27,
+      "p95": 35.27
+    },
+    "pgpool_recovery_seconds": {
+      "max": 59.05,
+      "avg": 59.05,
+      "p95": 59.05
+    },
+    "readyz_p95_ms": {
+      "max": 1014.96,
+      "avg": 1014.96,
+      "p95": 1014.96
+    },
+    "wall_seconds": {
+      "max": 137.32,
+      "avg": 137.32,
+      "p95": 137.32
+    },
+    "precheck_seconds": {
+      "max": 3.0,
+      "avg": 3.0,
+      "p95": 3.0
+    },
+    "failure_action_seconds": {
+      "max": 23.51,
+      "avg": 23.51,
+      "p95": 23.51
+    },
+    "recovery_wait_seconds": {
+      "max": 35.54,
+      "avg": 35.54,
+      "p95": 35.54
+    },
+    "verification_seconds": {
+      "max": 75.27,
+      "avg": 75.27,
+      "p95": 75.27
+    },
+    "readyz_5xx_total": 2,
+    "split_brain_count": 0,
+    "integrity_fail_count": 0,
+    "alert_fired_count": 0,
+    "alert_uncleared_count": 1
+  },
+  "standby_recovery": {
+    "runs": 1,
+    "success_runs": 1,
+    "success_rate": 1.0,
+    "rto_seconds": {
+      "max": null,
+      "avg": null,
+      "p95": null
+    },
+    "rejoin_seconds": {
+      "max": 0.85,
+      "avg": 0.85,
+      "p95": 0.85
+    },
+    "pgpool_recovery_seconds": {
+      "max": 0.3,
+      "avg": 0.3,
+      "p95": 0.3
+    },
+    "readyz_p95_ms": {
+      "max": 196.5,
+      "avg": 196.5,
+      "p95": 196.5
+    },
+    "wall_seconds": {
+      "max": 73.14,
+      "avg": 73.14,
+      "p95": 73.14
+    },
+    "precheck_seconds": {
+      "max": 3.01,
+      "avg": 3.01,
+      "p95": 3.01
+    },
+    "failure_action_seconds": {
+      "max": 60.26,
+      "avg": 60.26,
+      "p95": 60.26
+    },
+    "recovery_wait_seconds": {
+      "max": 1.16,
+      "avg": 1.16,
+      "p95": 1.16
+    },
+    "verification_seconds": {
+      "max": 8.72,
+      "avg": 8.72,
+      "p95": 8.72
+    },
+    "readyz_5xx_total": 1,
+    "split_brain_count": 0,
+    "integrity_fail_count": 0,
+    "alert_fired_count": 1,
+    "alert_uncleared_count": 0
+  }
+}

@@ -68,7 +68,9 @@ spec:
               db_name = os.getenv("DB_NAME", "Django_DB")
               check_interval = int(os.getenv("CHECK_INTERVAL_SECONDS", "5"))
               connect_timeout = int(os.getenv("DB_CONNECT_TIMEOUT_SECONDS", "3"))
-              fence_cooldown = int(os.getenv("FENCE_COOLDOWN_SECONDS", "20"))
+              fence_cooldown = int(os.getenv("FENCE_COOLDOWN_SECONDS", "30"))
+              max_fences = int(os.getenv("MAX_FENCES_PER_WINDOW", "3"))
+              fence_window = int(os.getenv("FENCE_WINDOW_SECONDS", "120"))
 
               token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
               ca_path = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
@@ -133,6 +135,7 @@ spec:
 
               leader_hint = None
               last_fence_at = 0.0
+              fence_events = []
 
               while True:
                 try:
@@ -170,12 +173,22 @@ spec:
 
                     losers = [p["name"] for p in primaries[1:]]
                     losers = [p for p in primary_names if p != keeper]
+                    now = time.time()
+                    fence_events = [t for t in fence_events if now - t < fence_window]
+                    if len(fence_events) >= max_fences:
+                      print(
+                        f"fencing suppressed by limit window={fence_window}s count={len(fence_events)} primaries={primary_names}",
+                        flush=True,
+                      )
+                      time.sleep(check_interval)
+                      continue
                     print(
                       f"split-brain detected primaries={primary_names} keep={keeper} fence={losers}",
                       flush=True,
                     )
                     for loser in losers:
                       fence_pod(loser)
+                      fence_events.append(time.time())
                     leader_hint = keeper
                     last_fence_at = now
                   elif len(primaries) == 1:
@@ -197,7 +210,11 @@ spec:
             - name: DB_CONNECT_TIMEOUT_SECONDS
               value: "3"
             - name: FENCE_COOLDOWN_SECONDS
-              value: "20"
+              value: "30"
+            - name: MAX_FENCES_PER_WINDOW
+              value: "3"
+            - name: FENCE_WINDOW_SECONDS
+              value: "120"
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:

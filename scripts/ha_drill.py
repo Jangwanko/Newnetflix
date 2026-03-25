@@ -21,10 +21,10 @@ SETTINGS = {
     "poll_interval_seconds": 5,
     "precheck_timeout": 120,
     "role_wait_timeout": 120,
-    "primary_watch_timeout": 180,
+    "primary_watch_timeout": 210,
     "standby_watch_timeout": 120,
     "pod_ready_timeout": 300,
-    "pgpool_timeout_primary": 180,
+    "pgpool_timeout_primary": 240,
     "pgpool_timeout_standby": 120,
     "readyz_probe_seconds_primary": 90,
     "readyz_probe_seconds_standby": 60,
@@ -60,6 +60,18 @@ class RunResult:
     promoted_pod: str
     started_at: str
     finished_at: str
+    precheck_seconds: Optional[float]
+    failure_action_seconds: Optional[float]
+    recovery_wait_seconds: Optional[float]
+    verification_seconds: Optional[float]
+    verify_integrity_seconds: Optional[float]
+    verify_roles_seconds: Optional[float]
+    verify_alert_seconds: Optional[float]
+    verify_readyz_seconds: Optional[float]
+    wall_seconds: Optional[float]
+    core_success: bool
+    extended_success: bool
+    fail_codes: str
 
 
 def run(cmd: List[str], check: bool = True, timeout: Optional[int] = None) -> subprocess.CompletedProcess:
@@ -459,6 +471,7 @@ def detect_promotion_from_logs(candidate_pods: List[str], since_iso: str) -> Tup
 
 def scenario_primary_failover(run_no: int) -> RunResult:
     started_at = now_iso()
+    t_run_start = time.time()
     fail_reason = ""
     deleted_pod = ""
     promoted_pod = ""
@@ -480,11 +493,23 @@ def scenario_primary_failover(run_no: int) -> RunResult:
     alert_cleared = False
     primary_end = None
     standby_end = None
+    precheck_seconds = None
+    failure_action_seconds = None
+    recovery_wait_seconds = None
+    verification_seconds = None
+    verify_integrity_seconds = None
+    verify_roles_seconds = None
+    verify_alert_seconds = None
+    verify_readyz_seconds = None
+    core_success = False
+    extended_success = False
+    fail_codes: List[str] = []
 
     probe_name = f"readyz-pf-{run_no}-{int(time.time())}"
     marker = int(time.time() * 1000) + run_no
 
     try:
+        t_stage = time.time()
         roles = wait_until_roles(1, 2, timeout_sec=SETTINGS["precheck_timeout"])
         p, s = role_counts(roles)
         if p != 1 or s != 2:
@@ -498,7 +523,9 @@ def scenario_primary_failover(run_no: int) -> RunResult:
 
         tx_before, _ = insert_integrity_marker("primary_failover", run_no, marker)
         start_readyz_probe(probe_name, seconds=SETTINGS["readyz_probe_seconds_primary"])
+        precheck_seconds = round(time.time() - t_stage, 2)
 
+        t_stage = time.time()
         since_iso = now_iso()
         t0 = time.time()
         kubectl(["delete", "pod", "-n", NAMESPACE, primary_pod])
@@ -525,7 +552,9 @@ def scenario_primary_failover(run_no: int) -> RunResult:
         promoted = pr
         if lpod and not promoted_pod:
             promoted_pod = lpod
+        failure_action_seconds = round(time.time() - t_stage, 2)
 
+        t_stage = time.time()
         try:
             rejoin, _, _ = wait_for_recreation_and_roles(
                 recreated_pod=primary_pod,
@@ -537,39 +566,79 @@ def scenario_primary_failover(run_no: int) -> RunResult:
             pass
 
         pgpool_recovery = query_pgpool_until_success(t0, timeout_sec=SETTINGS["pgpool_timeout_primary"])
+        recovery_wait_seconds = round(time.time() - t_stage, 2)
+
+        t_stage = time.time()
+        t_sub = time.time()
         tx_after, _, marker_exists = check_integrity_marker(marker)
         integrity_ok = bool(marker_exists)
+        verify_integrity_seconds = round(time.time() - t_sub, 2)
 
+        t_sub = time.time()
         roles_end = get_roles()
         primary_end, standby_end = role_counts(roles_end)
         if primary_end != 1:
             split_brain = True
+        verify_roles_seconds = round(time.time() - t_sub, 2)
 
+        t_sub = time.time()
         firing_end = set(get_alert_firing_names())
         alert_cleared = not bool(TARGET_ALERTS & firing_end)
+        verify_alert_seconds = round(time.time() - t_sub, 2)
 
+        t_sub = time.time()
         readyz_5xx, readyz_non200, readyz_avg, readyz_p95 = collect_readyz_probe(probe_name)
+        verify_readyz_seconds = round(time.time() - t_sub, 2)
+        verification_seconds = round(time.time() - t_stage, 2)
 
-        success = (
+        core_success = (
             not split_brain
             and integrity_ok
             and primary_end == 1
             and standby_end == 2
             and rto is not None
             and rejoin is not None
-            and pgpool_recovery is not None
         )
+        extended_success = (
+            core_success
+            and pgpool_recovery is not None
+            and alert_cleared
+            and (readyz_5xx or 0) == 0
+        )
+
+        if split_brain:
+            fail_codes.append("FAIL_SPLIT_BRAIN")
+        if rto is None:
+            fail_codes.append("FAIL_NO_PROMOTION")
+        if rejoin is None:
+            fail_codes.append("FAIL_REJOIN_TIMEOUT")
+        if not integrity_ok:
+            fail_codes.append("FAIL_INTEGRITY")
+        if primary_end != 1 or standby_end != 2:
+            fail_codes.append("FAIL_ROLE_NOT_CONVERGED")
+        if pgpool_recovery is None:
+            fail_codes.append("FAIL_PGPOOL_RECOVERY_TIMEOUT")
+        if not alert_cleared:
+            fail_codes.append("FAIL_ALERT_UNCLEARED")
+        if (readyz_5xx or 0) > 0:
+            fail_codes.append("FAIL_READYZ_5XX")
+
+        success = core_success
         if not success and not fail_reason:
-            fail_reason = "postcheck criteria not met"
+            fail_reason = "|".join(fail_codes) if fail_codes else "postcheck criteria not met"
     except Exception as e:
         success = False
         fail_reason = str(e)
+        core_success = False
+        extended_success = False
+        fail_codes = ["FAIL_EXCEPTION"]
         try:
             readyz_5xx, readyz_non200, readyz_avg, readyz_p95 = collect_readyz_probe(probe_name)
         except Exception:
             pass
 
     finished_at = now_iso()
+    wall_seconds = round(time.time() - t_run_start, 2)
     return RunResult(
         scenario="primary_failover",
         run=run_no,
@@ -597,11 +666,24 @@ def scenario_primary_failover(run_no: int) -> RunResult:
         promoted_pod=promoted_pod,
         started_at=started_at,
         finished_at=finished_at,
+        precheck_seconds=precheck_seconds,
+        failure_action_seconds=failure_action_seconds,
+        recovery_wait_seconds=recovery_wait_seconds,
+        verification_seconds=verification_seconds,
+        verify_integrity_seconds=verify_integrity_seconds,
+        verify_roles_seconds=verify_roles_seconds,
+        verify_alert_seconds=verify_alert_seconds,
+        verify_readyz_seconds=verify_readyz_seconds,
+        wall_seconds=wall_seconds,
+        core_success=core_success,
+        extended_success=extended_success,
+        fail_codes="|".join(fail_codes),
     )
 
 
 def scenario_standby_recovery(run_no: int) -> RunResult:
     started_at = now_iso()
+    t_run_start = time.time()
     fail_reason = ""
     deleted_pod = ""
     promoted_pod = ""
@@ -620,10 +702,22 @@ def scenario_standby_recovery(run_no: int) -> RunResult:
     standby_end = None
     rejoin = None
     pgpool_recovery = None
+    precheck_seconds = None
+    failure_action_seconds = None
+    recovery_wait_seconds = None
+    verification_seconds = None
+    verify_integrity_seconds = None
+    verify_roles_seconds = None
+    verify_alert_seconds = None
+    verify_readyz_seconds = None
+    core_success = False
+    extended_success = False
+    fail_codes: List[str] = []
     probe_name = f"readyz-sr-{run_no}-{int(time.time())}"
     marker = int(time.time() * 1000) + 100000 + run_no
 
     try:
+        t_stage = time.time()
         roles = wait_until_roles(1, 2, timeout_sec=SETTINGS["precheck_timeout"])
         p, s = role_counts(roles)
         if p != 1 or s != 2:
@@ -636,7 +730,9 @@ def scenario_standby_recovery(run_no: int) -> RunResult:
 
         tx_before, _ = insert_integrity_marker("standby_recovery", run_no, marker)
         start_readyz_probe(probe_name, seconds=SETTINGS["readyz_probe_seconds_standby"])
+        precheck_seconds = round(time.time() - t_stage, 2)
 
+        t_stage = time.time()
         t0 = time.time()
         kubectl(["delete", "pod", "-n", NAMESPACE, deleted_pod])
 
@@ -650,7 +746,9 @@ def scenario_standby_recovery(run_no: int) -> RunResult:
                 split_brain = True
                 break
             time.sleep(1)
+        failure_action_seconds = round(time.time() - t_stage, 2)
 
+        t_stage = time.time()
         try:
             rejoin, _, _ = wait_for_recreation_and_roles(
                 recreated_pod=deleted_pod,
@@ -664,38 +762,76 @@ def scenario_standby_recovery(run_no: int) -> RunResult:
         # Standby recovery can spend most of the budget on pod ready/rejoin.
         # Measure pgpool recovery from "now" to avoid false failures from elapsed pre-steps.
         pgpool_recovery = query_pgpool_until_success(time.time(), timeout_sec=SETTINGS["pgpool_timeout_standby"])
+        recovery_wait_seconds = round(time.time() - t_stage, 2)
+
+        t_stage = time.time()
+        t_sub = time.time()
         tx_after, _, marker_exists = check_integrity_marker(marker)
         integrity_ok = bool(marker_exists)
+        verify_integrity_seconds = round(time.time() - t_sub, 2)
 
+        t_sub = time.time()
         roles_end = get_roles()
         primary_end, standby_end = role_counts(roles_end)
         if primary_end != 1:
             split_brain = True
+        verify_roles_seconds = round(time.time() - t_sub, 2)
 
+        t_sub = time.time()
         firing_end = set(get_alert_firing_names())
         alert_cleared = not bool(TARGET_ALERTS & firing_end)
+        verify_alert_seconds = round(time.time() - t_sub, 2)
 
+        t_sub = time.time()
         readyz_5xx, readyz_non200, readyz_avg, readyz_p95 = collect_readyz_probe(probe_name)
+        verify_readyz_seconds = round(time.time() - t_sub, 2)
+        verification_seconds = round(time.time() - t_stage, 2)
 
-        success = (
+        core_success = (
             not split_brain
             and integrity_ok
             and primary_end == 1
             and standby_end == 2
             and rejoin is not None
-            and pgpool_recovery is not None
         )
+        extended_success = (
+            core_success
+            and pgpool_recovery is not None
+            and alert_cleared
+            and (readyz_5xx or 0) == 0
+        )
+
+        if split_brain:
+            fail_codes.append("FAIL_SPLIT_BRAIN")
+        if rejoin is None:
+            fail_codes.append("FAIL_REJOIN_TIMEOUT")
+        if not integrity_ok:
+            fail_codes.append("FAIL_INTEGRITY")
+        if primary_end != 1 or standby_end != 2:
+            fail_codes.append("FAIL_ROLE_NOT_CONVERGED")
+        if pgpool_recovery is None:
+            fail_codes.append("FAIL_PGPOOL_RECOVERY_TIMEOUT")
+        if not alert_cleared:
+            fail_codes.append("FAIL_ALERT_UNCLEARED")
+        if (readyz_5xx or 0) > 0:
+            fail_codes.append("FAIL_READYZ_5XX")
+
+        success = core_success
         if not success and not fail_reason:
-            fail_reason = "postcheck criteria not met"
+            fail_reason = "|".join(fail_codes) if fail_codes else "postcheck criteria not met"
     except Exception as e:
         success = False
         fail_reason = str(e)
+        core_success = False
+        extended_success = False
+        fail_codes = ["FAIL_EXCEPTION"]
         try:
             readyz_5xx, readyz_non200, readyz_avg, readyz_p95 = collect_readyz_probe(probe_name)
         except Exception:
             pass
 
     finished_at = now_iso()
+    wall_seconds = round(time.time() - t_run_start, 2)
     return RunResult(
         scenario="standby_recovery",
         run=run_no,
@@ -723,6 +859,18 @@ def scenario_standby_recovery(run_no: int) -> RunResult:
         promoted_pod=promoted_pod,
         started_at=started_at,
         finished_at=finished_at,
+        precheck_seconds=precheck_seconds,
+        failure_action_seconds=failure_action_seconds,
+        recovery_wait_seconds=recovery_wait_seconds,
+        verification_seconds=verification_seconds,
+        verify_integrity_seconds=verify_integrity_seconds,
+        verify_roles_seconds=verify_roles_seconds,
+        verify_alert_seconds=verify_alert_seconds,
+        verify_readyz_seconds=verify_readyz_seconds,
+        wall_seconds=wall_seconds,
+        core_success=core_success,
+        extended_success=extended_success,
+        fail_codes="|".join(fail_codes),
     )
 
 
@@ -732,6 +880,10 @@ def summarize(results: List[RunResult]) -> Dict[str, Dict[str, object]]:
         rows = [r for r in results if r.scenario == scenario]
         ok = [r for r in rows if r.success]
         success_rate = round(len(ok) / len(rows), 4) if rows else 0.0
+        core_ok = [r for r in rows if r.core_success]
+        extended_ok = [r for r in rows if r.extended_success]
+        core_success_rate = round(len(core_ok) / len(rows), 4) if rows else 0.0
+        extended_success_rate = round(len(extended_ok) / len(rows), 4) if rows else 0.0
 
         def metric_stats(values: List[float]) -> Dict[str, Optional[float]]:
             if not values:
@@ -746,25 +898,52 @@ def summarize(results: List[RunResult]) -> Dict[str, Dict[str, object]]:
         rejoin_vals = [r.rejoin_seconds for r in ok if r.rejoin_seconds is not None]
         pgpool_vals = [r.pgpool_recovery_seconds for r in ok if r.pgpool_recovery_seconds is not None]
         readyz_p95_vals = [r.readyz_p95_ms for r in rows if r.readyz_p95_ms is not None]
+        wall_vals = [r.wall_seconds for r in rows if r.wall_seconds is not None]
+        precheck_vals = [r.precheck_seconds for r in rows if r.precheck_seconds is not None]
+        action_vals = [r.failure_action_seconds for r in rows if r.failure_action_seconds is not None]
+        recovery_vals = [r.recovery_wait_seconds for r in rows if r.recovery_wait_seconds is not None]
+        verify_vals = [r.verification_seconds for r in rows if r.verification_seconds is not None]
+        verify_integrity_vals = [r.verify_integrity_seconds for r in rows if r.verify_integrity_seconds is not None]
+        verify_roles_vals = [r.verify_roles_seconds for r in rows if r.verify_roles_seconds is not None]
+        verify_alert_vals = [r.verify_alert_seconds for r in rows if r.verify_alert_seconds is not None]
+        verify_readyz_vals = [r.verify_readyz_seconds for r in rows if r.verify_readyz_seconds is not None]
         readyz_5xx_total = sum(r.readyz_5xx_count or 0 for r in rows)
         split_brain_count = sum(1 for r in rows if r.split_brain)
         integrity_fail_count = sum(1 for r in rows if not r.integrity_ok)
         alert_fire_count = sum(1 for r in rows if r.alert_fired)
         alert_uncleared_count = sum(1 for r in rows if not r.alert_cleared_after)
+        fail_code_counts: Dict[str, int] = {}
+        for r in rows:
+            for code in [c for c in (r.fail_codes or "").split("|") if c]:
+                fail_code_counts[code] = fail_code_counts.get(code, 0) + 1
 
         out[scenario] = {
             "runs": len(rows),
             "success_runs": len(ok),
             "success_rate": success_rate,
+            "core_success_runs": len(core_ok),
+            "core_success_rate": core_success_rate,
+            "extended_success_runs": len(extended_ok),
+            "extended_success_rate": extended_success_rate,
             "rto_seconds": metric_stats([v for v in rto_vals if v is not None]),
             "rejoin_seconds": metric_stats([v for v in rejoin_vals if v is not None]),
             "pgpool_recovery_seconds": metric_stats([v for v in pgpool_vals if v is not None]),
             "readyz_p95_ms": metric_stats([v for v in readyz_p95_vals if v is not None]),
+            "wall_seconds": metric_stats([v for v in wall_vals if v is not None]),
+            "precheck_seconds": metric_stats([v for v in precheck_vals if v is not None]),
+            "failure_action_seconds": metric_stats([v for v in action_vals if v is not None]),
+            "recovery_wait_seconds": metric_stats([v for v in recovery_vals if v is not None]),
+            "verification_seconds": metric_stats([v for v in verify_vals if v is not None]),
+            "verify_integrity_seconds": metric_stats([v for v in verify_integrity_vals if v is not None]),
+            "verify_roles_seconds": metric_stats([v for v in verify_roles_vals if v is not None]),
+            "verify_alert_seconds": metric_stats([v for v in verify_alert_vals if v is not None]),
+            "verify_readyz_seconds": metric_stats([v for v in verify_readyz_vals if v is not None]),
             "readyz_5xx_total": readyz_5xx_total,
             "split_brain_count": split_brain_count,
             "integrity_fail_count": integrity_fail_count,
             "alert_fired_count": alert_fire_count,
             "alert_uncleared_count": alert_uncleared_count,
+            "fail_code_counts": fail_code_counts,
         }
     return out
 
@@ -826,7 +1005,10 @@ def main() -> None:
             print(f"  - primary_failover run {i}/{args.iterations}")
             res = scenario_primary_failover(i)
             all_results.append(res)
-            print(f"    success={res.success} rto={res.rto_seconds} rejoin={res.rejoin_seconds} reason={res.fail_reason}")
+            print(
+                f"    core={res.core_success} ext={res.extended_success} "
+                f"rto={res.rto_seconds} rejoin={res.rejoin_seconds} reason={res.fail_reason}"
+            )
             if not res.success:
                 print("    healing after failure...")
                 heal_cluster()
@@ -839,7 +1021,10 @@ def main() -> None:
             print(f"  - standby_recovery run {i}/{args.iterations}")
             res = scenario_standby_recovery(i)
             all_results.append(res)
-            print(f"    success={res.success} rejoin={res.rejoin_seconds} reason={res.fail_reason}")
+            print(
+                f"    core={res.core_success} ext={res.extended_success} "
+                f"rejoin={res.rejoin_seconds} reason={res.fail_reason}"
+            )
             if not res.success:
                 print("    healing after failure...")
                 heal_cluster()
