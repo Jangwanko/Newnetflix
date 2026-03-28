@@ -9,6 +9,64 @@
 - Monitoring: Prometheus + Grafana + `postgres-exporter`
 - Fencing: `postgres-fencer` (split-brain 자동 감지/격리)
 
+## 🏗️ 아키텍처
+```mermaid
+flowchart TB
+    dev["👨‍💻 Developer (Push to main)"]
+
+    subgraph cicd["🔄 CI/CD — GitHub Actions"]
+        test["Test & Lint"]
+        scan["Trivy 보안 스캔"]
+        build["ECR 이미지 빌드/푸시"]
+        tf["Terraform validate"]
+    end
+
+    dev --> test --> scan --> build
+    dev --> tf
+
+    subgraph aws["☁️ AWS"]
+        subgraph eks["⚙️ EKS Cluster"]
+            ingress["NGINX Ingress\n(TLS · cert-manager)"]
+            web["Web Pod\n(Django)\n/metrics /livez /readyz"]
+            worker["Worker Pod\n(비동기 영상 처리)"]
+            eso["External Secrets Operator"]
+        end
+
+        subgraph data["🗄️ Data Layer"]
+            rds["RDS PostgreSQL\n(Multi-AZ)"]
+            s3["S3\n(영상 파일)"]
+            ecr["ECR\n(컨테이너 이미지)"]
+            sm["Secrets Manager"]
+        end
+
+        subgraph obs["📊 Observability"]
+            prom["Prometheus\n(RED 메트릭 · Alert)"]
+            grafana["Grafana\n(대시보드)"]
+            loki["Loki + Promtail\n(로그 수집)"]
+        end
+
+        iac["🏗️ Terraform (IaC)\nVPC · EKS · RDS · S3 · ECR · Secrets Manager"]
+    end
+
+    user["🌐 User"] --> ingress
+    ingress --> web
+    ingress --> worker
+    web --> rds
+    web --> s3
+    worker --> s3
+    eso --> sm
+    build --> ecr
+    ecr --> eks
+
+    web --> prom
+    prom --> grafana
+    loki --> grafana
+
+    iac -.->|프로비저닝| eks
+    iac -.->|프로비저닝| data
+```
+
+
 ## 실행 방법
 
 ### 1) Docker Compose
@@ -25,6 +83,13 @@ docker build --platform linux/amd64 --provenance=false -f docker/backend.Dockerf
 kubectl apply -k k8s/local-ha
 kubectl apply -k k8s/monitoring
 kubectl apply -k k8s/observability
+```
+
+```bash
+kubectl delete -k k8s/observability
+kubectl delete -k k8s/monitoring
+kubectl delete -k k8s/local-ha
+./tools/kind.exe delete cluster --name newnetflix-local
 ```
 
 ## HA Drill 자동 검증
