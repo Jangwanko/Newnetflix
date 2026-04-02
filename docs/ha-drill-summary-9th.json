@@ -1,0 +1,167 @@
+{
+  "primary_failover": {
+    "runs": 5,
+    "success_runs": 4,
+    "success_rate": 0.8,
+    "core_success_runs": 4,
+    "core_success_rate": 0.8,
+    "extended_success_runs": 0,
+    "extended_success_rate": 0.0,
+    "rto_seconds": {
+      "max": 27.36,
+      "avg": 18.17,
+      "p95": 27.36
+    },
+    "rejoin_seconds": {
+      "max": 18.32,
+      "avg": 15.34,
+      "p95": 18.32
+    },
+    "pgpool_recovery_seconds": {
+      "max": 194.16,
+      "avg": 138.16,
+      "p95": 194.16
+    },
+    "readyz_p95_ms": {
+      "max": 5899.31,
+      "avg": 2011.75,
+      "p95": 5899.31
+    },
+    "wall_seconds": {
+      "max": 248.64,
+      "avg": 187.4,
+      "p95": 248.64
+    },
+    "precheck_seconds": {
+      "max": 14.21,
+      "avg": 5.35,
+      "p95": 14.21
+    },
+    "failure_action_seconds": {
+      "max": 41.22,
+      "avg": 23.24,
+      "p95": 41.22
+    },
+    "recovery_wait_seconds": {
+      "max": 212.47,
+      "avg": 128.84,
+      "p95": 212.47
+    },
+    "verification_seconds": {
+      "max": 80.03,
+      "avg": 29.96,
+      "p95": 80.03
+    },
+    "verify_integrity_seconds": {
+      "max": 2.27,
+      "avg": 2.22,
+      "p95": 2.27
+    },
+    "verify_roles_seconds": {
+      "max": 0.59,
+      "avg": 0.57,
+      "p95": 0.59
+    },
+    "verify_alert_seconds": {
+      "max": 6.24,
+      "avg": 2.54,
+      "p95": 6.24
+    },
+    "verify_readyz_seconds": {
+      "max": 77.19,
+      "avg": 24.63,
+      "p95": 77.19
+    },
+    "readyz_5xx_total": 5,
+    "split_brain_count": 1,
+    "integrity_fail_count": 0,
+    "alert_fired_count": 0,
+    "alert_uncleared_count": 0,
+    "fail_code_counts": {
+      "FAIL_READYZ_5XX": 5,
+      "FAIL_SPLIT_BRAIN": 1
+    }
+  },
+  "standby_recovery": {
+    "runs": 5,
+    "success_runs": 5,
+    "success_rate": 1.0,
+    "core_success_runs": 5,
+    "core_success_rate": 1.0,
+    "extended_success_runs": 4,
+    "extended_success_rate": 0.8,
+    "rto_seconds": {
+      "max": null,
+      "avg": null,
+      "p95": null
+    },
+    "rejoin_seconds": {
+      "max": 0.89,
+      "avg": 0.84,
+      "p95": 0.89
+    },
+    "pgpool_recovery_seconds": {
+      "max": 0.31,
+      "avg": 0.28,
+      "p95": 0.31
+    },
+    "readyz_p95_ms": {
+      "max": 72.75,
+      "avg": 48.12,
+      "p95": 72.75
+    },
+    "wall_seconds": {
+      "max": 129.92,
+      "avg": 129.54,
+      "p95": 129.92
+    },
+    "precheck_seconds": {
+      "max": 3.0,
+      "avg": 2.97,
+      "p95": 3.0
+    },
+    "failure_action_seconds": {
+      "max": 121.53,
+      "avg": 121.19,
+      "p95": 121.53
+    },
+    "recovery_wait_seconds": {
+      "max": 1.2,
+      "avg": 1.12,
+      "p95": 1.2
+    },
+    "verification_seconds": {
+      "max": 4.32,
+      "avg": 4.25,
+      "p95": 4.32
+    },
+    "verify_integrity_seconds": {
+      "max": 2.23,
+      "avg": 2.21,
+      "p95": 2.23
+    },
+    "verify_roles_seconds": {
+      "max": 0.65,
+      "avg": 0.59,
+      "p95": 0.65
+    },
+    "verify_alert_seconds": {
+      "max": 0.1,
+      "avg": 0.08,
+      "p95": 0.1
+    },
+    "verify_readyz_seconds": {
+      "max": 1.39,
+      "avg": 1.37,
+      "p95": 1.39
+    },
+    "readyz_5xx_total": 1,
+    "split_brain_count": 0,
+    "integrity_fail_count": 0,
+    "alert_fired_count": 0,
+    "alert_uncleared_count": 0,
+    "fail_code_counts": {
+      "FAIL_READYZ_5XX": 1
+    }
+  }
+}

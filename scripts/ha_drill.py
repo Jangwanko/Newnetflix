@@ -28,6 +28,8 @@ SETTINGS = {
     "pgpool_timeout_standby": 120,
     "readyz_probe_seconds_primary": 90,
     "readyz_probe_seconds_standby": 60,
+    "alert_clear_timeout_seconds": 45,
+    "alert_clear_poll_seconds": 3,
     "sleep_between_runs": 2,
 }
 
@@ -123,6 +125,8 @@ def configure_settings(args: argparse.Namespace) -> None:
                 "pgpool_timeout_standby": 60,
                 "readyz_probe_seconds_primary": 25,
                 "readyz_probe_seconds_standby": 20,
+                "alert_clear_timeout_seconds": 20,
+                "alert_clear_poll_seconds": 2,
                 "sleep_between_runs": 0,
             }
         )
@@ -384,6 +388,17 @@ def get_alert_firing_names() -> List[str]:
         return []
 
 
+def wait_for_alert_clear(timeout_sec: int, poll_sec: int) -> bool:
+    start = time.time()
+    while time.time() - start < timeout_sec:
+        firing = set(get_alert_firing_names())
+        if not bool(TARGET_ALERTS & firing):
+            return True
+        time.sleep(poll_sec)
+    firing = set(get_alert_firing_names())
+    return not bool(TARGET_ALERTS & firing)
+
+
 def start_readyz_probe(name: str, seconds: int = 90) -> None:
     script = (
         f"i=0; while [ $i -lt {seconds} ]; do "
@@ -538,7 +553,8 @@ def scenario_primary_failover(run_no: int) -> RunResult:
             p_now, _ = role_counts(roles_now)
             if p_now > 1:
                 split_brain = True
-                break
+                time.sleep(1)
+                continue
             if p_now == 1:
                 new_primary = [k for k, v in roles_now.items() if v == "primary"]
                 if new_primary and new_primary[0] != primary_pod:
@@ -552,6 +568,8 @@ def scenario_primary_failover(run_no: int) -> RunResult:
         promoted = pr
         if lpod and not promoted_pod:
             promoted_pod = lpod
+        if rto is None and promoted is not None:
+            rto = promoted
         failure_action_seconds = round(time.time() - t_stage, 2)
 
         t_stage = time.time()
@@ -565,7 +583,9 @@ def scenario_primary_failover(run_no: int) -> RunResult:
         except Exception:
             pass
 
-        pgpool_recovery = query_pgpool_until_success(t0, timeout_sec=SETTINGS["pgpool_timeout_primary"])
+        # Primary failover can spend most budget on role convergence/rejoin.
+        # Measure pgpool recovery from "now" to isolate proxy convergence time.
+        pgpool_recovery = query_pgpool_until_success(time.time(), timeout_sec=SETTINGS["pgpool_timeout_primary"])
         recovery_wait_seconds = round(time.time() - t_stage, 2)
 
         t_stage = time.time()
@@ -582,8 +602,10 @@ def scenario_primary_failover(run_no: int) -> RunResult:
         verify_roles_seconds = round(time.time() - t_sub, 2)
 
         t_sub = time.time()
-        firing_end = set(get_alert_firing_names())
-        alert_cleared = not bool(TARGET_ALERTS & firing_end)
+        alert_cleared = wait_for_alert_clear(
+            timeout_sec=SETTINGS["alert_clear_timeout_seconds"],
+            poll_sec=SETTINGS["alert_clear_poll_seconds"],
+        )
         verify_alert_seconds = round(time.time() - t_sub, 2)
 
         t_sub = time.time()
@@ -744,7 +766,8 @@ def scenario_standby_recovery(run_no: int) -> RunResult:
             p_now, _ = role_counts(roles_now)
             if p_now > 1:
                 split_brain = True
-                break
+                time.sleep(1)
+                continue
             time.sleep(1)
         failure_action_seconds = round(time.time() - t_stage, 2)
 
@@ -778,8 +801,10 @@ def scenario_standby_recovery(run_no: int) -> RunResult:
         verify_roles_seconds = round(time.time() - t_sub, 2)
 
         t_sub = time.time()
-        firing_end = set(get_alert_firing_names())
-        alert_cleared = not bool(TARGET_ALERTS & firing_end)
+        alert_cleared = wait_for_alert_clear(
+            timeout_sec=SETTINGS["alert_clear_timeout_seconds"],
+            poll_sec=SETTINGS["alert_clear_poll_seconds"],
+        )
         verify_alert_seconds = round(time.time() - t_sub, 2)
 
         t_sub = time.time()

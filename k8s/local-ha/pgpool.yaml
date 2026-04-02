@@ -43,6 +43,16 @@ spec:
                 secretKeyRef:
                   name: postgres-ha-secret
                   key: PGPOOL_ADMIN_PASSWORD
+            - name: PGPOOL_HEALTH_CHECK_PERIOD
+              value: "5"
+            - name: PGPOOL_HEALTH_CHECK_TIMEOUT
+              value: "3"
+            - name: PGPOOL_HEALTH_CHECK_MAX_RETRIES
+              value: "3"
+            - name: PGPOOL_HEALTH_CHECK_RETRY_DELAY
+              value: "1"
+            - name: PGPOOL_SR_CHECK_PERIOD
+              value: "5"
           readinessProbe:
             tcpSocket:
               port: 5432
